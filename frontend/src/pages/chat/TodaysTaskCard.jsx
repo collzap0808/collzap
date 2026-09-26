@@ -113,13 +113,47 @@ function ReviewModal({ open, onClose, onSubmit, loading }) {
   );
 }
 
+const isPdf = (url) => /\.pdf($|[?#])/i.test(url);
+
+/** An uploaded photo shows inline (click to open full size); a PDF shows as a link. */
+function Attachment({ url }) {
+  if (!url) return null;
+  if (isPdf(url)) {
+    return (
+      <a href={url} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-accent-700 underline decoration-accent-300 underline-offset-4">
+        Open attached PDF <ExternalLink className="h-3 w-3" aria-hidden="true" />
+      </a>
+    );
+  }
+  return (
+    <a href={url} target="_blank" rel="noreferrer" className="mt-2 block overflow-hidden rounded-lg border border-line">
+      <img src={url} alt="Attached submission" loading="lazy" className="max-h-72 w-full bg-surface object-contain" />
+    </a>
+  );
+}
+
+function ReviewNote({ review }) {
+  const scores = [review.completionScore, review.qualityScore, review.learningScore, review.effortScore];
+  return (
+    <div className="rounded-md border border-line bg-surface px-3 py-2">
+      <p className="text-xs text-ink">
+        <span className="font-medium">{review.reviewerName}</span>
+        <span className="ml-2 font-mono text-[10px] text-mute tnum">
+          {scores.join(' / ')}
+        </span>
+      </p>
+      {review.feedbackText && <p className="mt-1 whitespace-pre-wrap text-xs text-mute">{review.feedbackText}</p>}
+    </div>
+  );
+}
+
 /**
  * Slots into GroupDetailPage right after the header. Any active member may
  * review any other active member's submission — there's no fixed pairing, so
  * this same component works whether the group has 2 people or 40.
  */
 export default function TodaysTaskCard({ groupId }) {
-  const { todaysTask, fetchTodaysTask, submitTask, reviewSubmission, loading } = useTaskStore();
+  const { todaysTask, fetchTodaysTask, fetchMyStats, submitTask, reviewSubmission, loading } = useTaskStore();
   const [contentText, setContentText] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [fileUrl, setFileUrl] = useState('');
@@ -128,6 +162,25 @@ export default function TodaysTaskCard({ groupId }) {
 
   useEffect(() => {
     fetchTodaysTask(groupId).catch(() => {}).finally(() => setLoaded(true));
+  }, [groupId]);
+
+  // Peers' submissions and reviews land while this is open, so it refreshes
+  // itself: every 8s while the tab is visible, and immediately on return to
+  // the tab. Silent, so the form and review modal never flicker to disabled.
+  useEffect(() => {
+    const refresh = () => {
+      if (document.visibilityState === 'visible') {
+        fetchTodaysTask(groupId, { silent: true }).catch(() => {});
+      }
+    };
+    const timer = setInterval(refresh, 8000);
+    document.addEventListener('visibilitychange', refresh);
+    window.addEventListener('focus', refresh);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+      window.removeEventListener('focus', refresh);
+    };
   }, [groupId]);
 
   if (!loaded && loading) {
@@ -174,6 +227,7 @@ export default function TodaysTaskCard({ groupId }) {
       });
       toast.success('Submitted');
       fetchTodaysTask(groupId);
+      fetchMyStats().catch(() => {});
     } catch (error) {
       toast.error(error.message || 'Could not submit that');
     }
@@ -185,6 +239,7 @@ export default function TodaysTaskCard({ groupId }) {
       toast.success('Review sent');
       setReviewTarget(null);
       fetchTodaysTask(groupId);
+      fetchMyStats().catch(() => {});
     } catch (error) {
       toast.error(error.message || 'Could not submit that review');
     }
@@ -215,9 +270,25 @@ export default function TodaysTaskCard({ groupId }) {
       )}
 
       {mySubmission ? (
-        <div className="flex items-center gap-2 rounded-lg border border-good/30 bg-good/5 px-4 py-3 text-sm text-good">
-          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-          Submitted {new Date(mySubmission.submittedAt).toLocaleString()}
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 rounded-lg border border-good/30 bg-good/5 px-4 py-3 text-sm text-good">
+            <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+            Submitted {new Date(mySubmission.submittedAt).toLocaleString()}
+          </div>
+          {mySubmission.contentText && (
+            <p className="whitespace-pre-wrap text-sm text-ink">{mySubmission.contentText}</p>
+          )}
+          <Attachment url={mySubmission.fileUrl} />
+          <div className="space-y-2">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-mute">
+              Reviews of your work{mySubmission.reviews.length > 0 ? ` (${mySubmission.reviews.length})` : ''}
+            </p>
+            {mySubmission.reviews.length === 0 ? (
+              <p className="text-xs text-mute">No reviews yet. They appear here as soon as someone leaves one.</p>
+            ) : (
+              mySubmission.reviews.map((r) => <ReviewNote key={r.id} review={r} />)
+            )}
+          </div>
         </div>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3 border-t border-line pt-5">
@@ -263,6 +334,7 @@ export default function TodaysTaskCard({ groupId }) {
                   )}
                 </div>
                 {s.contentText && <p className="mt-2 whitespace-pre-wrap text-sm text-ink">{s.contentText}</p>}
+                <Attachment url={s.fileUrl} />
                 {s.linkUrl && (
                   <a href={s.linkUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-1 text-xs text-accent-700 underline decoration-accent-300 underline-offset-4">
                     Open link <ExternalLink className="h-3 w-3" aria-hidden="true" />

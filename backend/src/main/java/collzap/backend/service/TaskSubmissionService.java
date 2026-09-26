@@ -164,8 +164,18 @@ public class TaskSubmissionService {
 
     @Transactional(readOnly = true)
     public UserTaskStatsResponse myStats(UUID userId) {
+        // The stored streak only changes when the user next acts, so a missed day
+        // would otherwise leave it showing its old value forever. It is still alive
+        // if the last activity was today or yesterday (today's action can still save
+        // it); anything older means the streak is broken and reads as 0.
+        LocalDate today = LocalDate.now(TaskAssignmentService.TASK_ZONE);
         return userTaskStatsRepository.findByUserId(userId)
-            .map(s -> new UserTaskStatsResponse(s.getTotalPoints(), s.getCurrentStreakDays(), s.getLongestStreakDays()))
+            .map(s -> {
+                LocalDate last = s.getLastActivityDate();
+                boolean alive = last != null && !last.isBefore(today.minusDays(1));
+                return new UserTaskStatsResponse(
+                    s.getTotalPoints(), alive ? s.getCurrentStreakDays() : 0, s.getLongestStreakDays());
+            })
             .orElse(new UserTaskStatsResponse(0, 0, 0));
     }
 

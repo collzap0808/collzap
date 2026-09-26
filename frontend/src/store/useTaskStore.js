@@ -8,14 +8,16 @@ export const useTaskStore = create((set) => ({
   loading: false,
   error: null,
 
-  fetchTodaysTask: async (groupId) => {
-    set({ loading: true, error: null });
+  // `silent` is for background refreshes: it must not flip `loading`, or every
+  // poll would briefly disable the submit form and the review modal mid-typing.
+  fetchTodaysTask: async (groupId, { silent = false } = {}) => {
+    if (!silent) set({ loading: true, error: null });
     try {
       const todaysTask = await api.get(`/matches/${groupId}/tasks/today`);
-      set({ todaysTask, loading: false });
+      set(silent ? { todaysTask } : { todaysTask, loading: false });
       return todaysTask;
     } catch (error) {
-      set({ error: error.message, loading: false });
+      if (!silent) set({ error: error.message, loading: false });
       throw error;
     }
   },
