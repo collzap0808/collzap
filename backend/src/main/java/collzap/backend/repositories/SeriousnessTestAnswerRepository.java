@@ -20,6 +20,27 @@ public interface SeriousnessTestAnswerRepository extends JpaRepository<Seriousne
     @Query("select coalesce(sum(a.pointsEarned), 0) from SeriousnessTestAnswer a where a.attempt.id = :attemptId")
     int sumPointsEarnedByAttemptId(@Param("attemptId") UUID attemptId);
 
+    /**
+     * Atomic insert-or-update on the (attempt, question) unique key. A check-then-insert
+     * race can't be recovered in-transaction on Postgres — the failed insert aborts the
+     * whole transaction — so the conflict has to be resolved inside the statement.
+     */
+    @Modifying
+    @Query(value = """
+        insert into seriousness_test_answers
+            (id, attempt_id, question_id, selected_option_index, points_earned, created_at)
+        values (:id, :attemptId, :questionId, :selectedOptionIndex, :pointsEarned, now())
+        on conflict (attempt_id, question_id)
+        do update set selected_option_index = excluded.selected_option_index,
+                      points_earned = excluded.points_earned
+        """, nativeQuery = true)
+    void upsert(
+        @Param("id") UUID id,
+        @Param("attemptId") UUID attemptId,
+        @Param("questionId") UUID questionId,
+        @Param("selectedOptionIndex") int selectedOptionIndex,
+        @Param("pointsEarned") int pointsEarned
+    );
 
 
     @Modifying

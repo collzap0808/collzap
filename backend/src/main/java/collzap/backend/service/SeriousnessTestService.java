@@ -217,22 +217,7 @@ public class SeriousnessTestService {
 
         SeriousnessTestAttempt attempt = paperEntry.getAttempt();
         int points = question.getOptions().get(selected).points();
-        SeriousnessTestAnswer answer = answerRepository
-            .findByAttemptIdAndQuestionId(attempt.getId(), question.getId())
-            .orElseGet(() -> new SeriousnessTestAnswer(attempt, question, selected, points));
-        answer.setSelectedOptionIndex(selected);
-        answer.setPointsEarned(points);
-        try {
-            answerRepository.saveAndFlush(answer);
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            // Concurrent insert race condition: another thread created this answer just now.
-            // Fetch it, update it, and save.
-            answer = answerRepository.findByAttemptIdAndQuestionId(attempt.getId(), question.getId())
-                .orElseThrow(() -> new ConflictException("Answer was saved by another request but cannot be found"));
-            answer.setSelectedOptionIndex(selected);
-            answer.setPointsEarned(points);
-            answerRepository.saveAndFlush(answer);
-        }
+        answerRepository.upsert(UUID.randomUUID(), attempt.getId(), question.getId(), selected, points);
 
         int totalQuestions = attempts.stream().mapToInt(SeriousnessTestAttempt::getQuestionCount).sum();
         long answeredCount = attempts.stream()

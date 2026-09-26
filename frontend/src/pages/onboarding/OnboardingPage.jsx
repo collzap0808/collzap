@@ -29,6 +29,17 @@ const STEP_COMPONENTS = {
   SELECT_CONNECTION_TYPE: SelectConnectionTypeStep,
 };
 
+// Steps built as a single narrow column (header + max-w-lg form). They sit
+// centred in the layout; the grid-based steps already fill its full width.
+const NARROW_STEPS = new Set([
+  'VERIFY_EMAIL',
+  'UPLOAD_DOCUMENT',
+  'AWAITING_VERIFICATION',
+  'VERIFICATION_REJECTED',
+  'COMPLETE_PROFILE',
+  'TAKE_SERIOUSNESS_TEST',
+]);
+
 // Fixed order for the pure preference/data steps only — the ones a user can
 // safely revisit and resubmit. Verification and the seriousness test are
 // deliberately excluded: you can't un-verify an email, and once a test
@@ -154,6 +165,7 @@ export default function OnboardingPage() {
         animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
         exit={reduced ? { opacity: 0 } : { opacity: 0, y: -10 }}
         transition={transition(page, reduced)}
+        className={NARROW_STEPS.has(step) ? 'mx-auto w-full max-w-lg' : undefined}
       >
         {backTarget && (
           <button
