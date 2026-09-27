@@ -1,5 +1,6 @@
 package collzap.backend.repositories;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,4 +25,14 @@ public interface TaskSubmissionRepository extends JpaRepository<TaskSubmission, 
 
     @Query("select s from TaskSubmission s join fetch s.user join fetch s.taskAssignment where s.id = :id")
     Optional<TaskSubmission> findWithUserAndAssignmentById(@Param("id") UUID id);
+
+    @Query("""
+        select s.submittedAt from TaskSubmission s
+        where s.user.id = :userId and s.submittedAt >= :from and s.submittedAt < :to
+        """)
+    List<Instant> findSubmittedAtByUserBetween(
+        @Param("userId") UUID userId,
+        @Param("from") Instant from,
+        @Param("to") Instant to
+    );
 }

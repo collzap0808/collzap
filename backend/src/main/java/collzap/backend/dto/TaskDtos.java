@@ -1,6 +1,7 @@
 package collzap.backend.dto;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -89,6 +90,12 @@ public final class TaskDtos {
         boolean bankCompleted,
         List<SubmissionResponse> submissions
     ) {
+    }
+
+    /** {@code month} is "YYYY-MM"; {@code days} lists only IST days with at least one submission. */
+    public record TaskCalendarResponse(String month, List<DayCount> days) {
+        public record DayCount(LocalDate date, int submissions) {
+        }
     }
 
     public record UserTaskStatsResponse(

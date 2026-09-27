@@ -5,6 +5,7 @@ import { api } from '../api/api';
 export const useTaskStore = create((set) => ({
   todaysTask: null,
   myStats: null,
+  calendar: null,
   loading: false,
   error: null,
 
@@ -42,6 +43,18 @@ export const useTaskStore = create((set) => ({
       return response;
     } catch (error) {
       set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
+  // `month` is "YYYY-MM"; omitted means the current IST month (server decides).
+  fetchCalendar: async (month) => {
+    try {
+      const calendar = await api.get('/me/task-stats/calendar', { params: month ? { month } : {} });
+      set({ calendar });
+      return calendar;
+    } catch (error) {
+      set({ error: error.message });
       throw error;
     }
   },

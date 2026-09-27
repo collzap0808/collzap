@@ -153,7 +153,7 @@ function ReviewNote({ review }) {
  * this same component works whether the group has 2 people or 40.
  */
 export default function TodaysTaskCard({ groupId }) {
-  const { todaysTask, fetchTodaysTask, fetchMyStats, submitTask, reviewSubmission, loading } = useTaskStore();
+  const { todaysTask, fetchTodaysTask, fetchMyStats, fetchCalendar, submitTask, reviewSubmission, loading } = useTaskStore();
   const [contentText, setContentText] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
   const [fileUrl, setFileUrl] = useState('');
@@ -228,6 +228,7 @@ export default function TodaysTaskCard({ groupId }) {
       toast.success('Submitted');
       fetchTodaysTask(groupId);
       fetchMyStats().catch(() => {});
+      fetchCalendar().catch(() => {});
     } catch (error) {
       toast.error(error.message || 'Could not submit that');
     }

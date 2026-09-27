@@ -5,6 +5,7 @@ import { ArrowRight, Clock3, Flame, MessageSquare, Trophy, Users } from 'lucide-
 import toast from 'react-hot-toast';
 import Button from '../../components/ui/Button';
 import ShortTermInterestModal from './ShortTermInterestModal';
+import TaskCalendar from '../../components/tasks/TaskCalendar';
 import { useMatchStore } from '../../store/useMatchStore';
 import { useChatStore } from '../../store/useChatStore';
 import { useUserStore } from '../../store/useUserStore';
@@ -93,7 +94,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="space-y-14">
+    <div className="space-y-10">
       <header>
         <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tightest text-ink">
           {connections.length > 0
@@ -105,23 +106,13 @@ export default function HomePage() {
             ? 'Pick up where you stopped, or go looking for one more.'
             : 'Run the matcher once and see who else is up at this hour.'}
         </p>
-        {myStats && myStats.totalPoints > 0 && (
-          <div className="mt-4 flex items-center gap-4 text-mute">
-            <span className="inline-flex items-center gap-1.5 text-sm">
-              <Trophy className="h-3.5 w-3.5 text-accent-600" aria-hidden="true" />
-              <span className="font-medium text-ink tnum">{myStats.totalPoints}</span> pts
-            </span>
-            {myStats.currentStreakDays > 0 && (
-              <span className="inline-flex items-center gap-1.5 text-sm">
-                <Flame className="h-3.5 w-3.5 text-bad" aria-hidden="true" />
-                <span className="font-medium text-ink tnum">{myStats.currentStreakDays}</span>
-                -day streak
-              </span>
-            )}
-          </div>
-        )}
       </header>
 
+      {/* Two columns: the work on the left, your own progress on the right —
+          so the calendar runs alongside the content instead of forcing a tall,
+          mostly empty header row. Stacks on smaller screens. */}
+      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className="min-w-0 space-y-10">
       {/* One instrument, not three cards: a single hairline-bordered strip,
           divided rather than repeated, reading as one connected readout. */}
       <motion.div
@@ -158,7 +149,7 @@ export default function HomePage() {
         ))}
       </motion.div>
 
-      <div className="grid grid-cols-1 gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)_minmax(0,1fr)]">
+      <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
         {/* The one act */}
         <section>
           <h2 className="mb-4 font-mono text-[10px] uppercase tracking-widest text-mute">
@@ -237,6 +228,7 @@ export default function HomePage() {
           </ul>
         </section>
 
+        <div className="space-y-10">
         {/* Live connections */}
         <section>
           <h2 className="mb-4 font-mono text-[10px] uppercase tracking-widest text-mute">
@@ -318,6 +310,40 @@ export default function HomePage() {
             </ul>
           )}
         </section>
+        </div>
+      </div>
+      </div>
+
+      {/* Your own progress: points and streak sit directly above the month
+          they come from, so the number and the graph read as one thing. */}
+      <aside className="space-y-4">
+        <h2 className="font-mono text-[10px] uppercase tracking-widest text-mute">
+          Your progress
+        </h2>
+        <div className="grid grid-cols-2 divide-x divide-line overflow-hidden rounded-lg border border-line bg-surface">
+          <div className="p-4">
+            <Trophy className="h-4 w-4 text-accent-600" strokeWidth={1.8} aria-hidden="true" />
+            <p className="mt-3 font-display text-2xl font-extrabold tracking-tightest text-ink tnum">
+              {myStats?.totalPoints ?? 0}
+            </p>
+            <p className="mt-0.5 font-mono text-[10px] uppercase tracking-widest text-mute">Points</p>
+          </div>
+          <div className="p-4">
+            <Flame
+              className={myStats?.currentStreakDays > 0 ? 'h-4 w-4 text-bad' : 'h-4 w-4 text-mute'}
+              strokeWidth={1.8}
+              aria-hidden="true"
+            />
+            <p className="mt-3 font-display text-2xl font-extrabold tracking-tightest text-ink tnum">
+              {myStats?.currentStreakDays ?? 0}
+            </p>
+            <p className="mt-0.5 font-mono text-[10px] uppercase tracking-widest text-mute">
+              Day streak
+            </p>
+          </div>
+        </div>
+        <TaskCalendar className="max-w-none" />
+      </aside>
       </div>
 
       <ShortTermInterestModal open={shortTermModalOpen} onClose={() => setShortTermModalOpen(false)} />

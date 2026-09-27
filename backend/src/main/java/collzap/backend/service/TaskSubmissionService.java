@@ -2,9 +2,13 @@ package collzap.backend.service;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -14,6 +18,8 @@ import collzap.backend.dto.TaskDtos.ReviewResponse;
 import collzap.backend.dto.TaskDtos.ReviewSubmissionRequest;
 import collzap.backend.dto.TaskDtos.SubmissionResponse;
 import collzap.backend.dto.TaskDtos.SubmitTaskRequest;
+import collzap.backend.dto.TaskDtos.TaskCalendarResponse;
+import collzap.backend.dto.TaskDtos.TaskCalendarResponse.DayCount;
 import collzap.backend.dto.TaskDtos.TodaysTaskResponse;
 import collzap.backend.dto.TaskDtos.UserTaskStatsResponse;
 import collzap.backend.enums.NotificationType;
@@ -116,7 +122,7 @@ public class TaskSubmissionService {
                 assignment, user, trimToNull(request.contentText()), trimToNull(request.linkUrl()),
                 trimToNull(request.fileUrl()), Instant.now()
             ));
-            creditActivity(user, assignment.getTaskBankItem().getPoints());
+            creditActivity(user, assignment.getTaskBankItem().getPoints(), true);
             return toSubmissionResponse(submission, callerId);
         } catch (DataIntegrityViolationException ex) {
             // The exists-check above and the insert(s) below aren't atomic, so a
@@ -154,7 +160,7 @@ public class TaskSubmissionService {
                 request.completionScore(), request.qualityScore(), request.learningScore(), request.effortScore(),
                 trimToNull(request.feedbackText()), Instant.now()
             ));
-            creditActivity(reviewer, REVIEW_POINTS);
+            creditActivity(reviewer, REVIEW_POINTS, false);
             notifySubmitterOfReview(submission, reviewer);
             return toReviewResponse(review);
         } catch (DataIntegrityViolationException ex) {
@@ -180,9 +186,34 @@ public class TaskSubmissionService {
     }
 
     /**
-     * A qualifying action (submitting or reviewing) extends the streak at most
-     * once per IST calendar day, regardless of how many such actions happen
-     * that day, and resets to 1 after any gap.
+     * Days with at least one of the caller's own submissions in the given IST
+     * month — the same rule the streak uses, so the calendar and the streak
+     * number never disagree. Reviews earn points but never light up a day.
+     */
+    @Transactional(readOnly = true)
+    public TaskCalendarResponse monthCalendar(UUID userId, YearMonth month) {
+        YearMonth current = YearMonth.now(TaskAssignmentService.TASK_ZONE);
+        if (month.isAfter(current) || month.isBefore(current.minusMonths(24))) {
+            throw new BadRequestException("That month is out of range");
+        }
+        ZoneId zone = TaskAssignmentService.TASK_ZONE;
+        Instant from = month.atDay(1).atStartOfDay(zone).toInstant();
+        Instant to = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant();
+
+        Map<LocalDate, Long> counts = new TreeMap<>(
+            taskSubmissionRepository.findSubmittedAtByUserBetween(userId, from, to).stream()
+                .collect(Collectors.groupingBy(i -> i.atZone(zone).toLocalDate(), Collectors.counting()))
+        );
+        List<DayCount> days = counts.entrySet().stream()
+            .map(e -> new DayCount(e.getKey(), e.getValue().intValue()))
+            .toList();
+        return new TaskCalendarResponse(month.toString(), days);
+    }
+
+    /**
+     * Points are credited for both submitting and reviewing, but only a
+     * submission extends the streak — at most once per IST calendar day, resetting
+     * to 1 after any gap. Reviewing someone else's work never keeps a streak alive.
      *
      * <p>Has the same check-then-write shape as submit()/review() themselves —
      * "does this user already have a stats row?" then insert-or-update — so it
@@ -195,13 +226,13 @@ public class TaskSubmissionService {
      * re-reads the row the other call just created and applies this credit on
      * top of it instead of failing the whole request.
      */
-    private void creditActivity(User user, int points) {
+    private void creditActivity(User user, int points, boolean extendsStreak) {
         UserTaskStats stats = userTaskStatsRepository.findByUserId(user.getId()).orElse(null);
         boolean wasNew = stats == null;
         if (wasNew) {
             stats = new UserTaskStats(user);
         }
-        applyCredit(stats, points);
+        applyCredit(stats, points, extendsStreak);
         try {
             userTaskStatsRepository.save(stats);
         } catch (DataIntegrityViolationException ex) {
@@ -209,12 +240,16 @@ public class TaskSubmissionService {
                 throw ex; // an update hit a constraint for some other reason — a real problem, don't mask it
             }
             UserTaskStats existing = userTaskStatsRepository.findByUserId(user.getId()).orElseThrow(() -> ex);
-            applyCredit(existing, points);
+            applyCredit(existing, points, extendsStreak);
             userTaskStatsRepository.save(existing);
         }
     }
 
-    private void applyCredit(UserTaskStats stats, int points) {
+    private void applyCredit(UserTaskStats stats, int points, boolean extendsStreak) {
+        stats.setTotalPoints(stats.getTotalPoints() + points);
+        if (!extendsStreak) {
+            return;
+        }
         LocalDate today = LocalDate.now(TaskAssignmentService.TASK_ZONE);
         LocalDate last = stats.getLastActivityDate();
 
@@ -225,7 +260,6 @@ public class TaskSubmissionService {
         }
         stats.setLastActivityDate(today);
         stats.setLongestStreakDays(Math.max(stats.getLongestStreakDays(), stats.getCurrentStreakDays()));
-        stats.setTotalPoints(stats.getTotalPoints() + points);
     }
 
     private void notifySubmitterOfReview(TaskSubmission submission, User reviewer) {
