@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { ArrowRight, Clock3, Flame, MessageSquare, Trophy, Users } from 'lucide-react';
+import { ArrowRight, Clock3, MessageSquare, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../../components/ui/Button';
 import ShortTermInterestModal from './ShortTermInterestModal';
 import TaskCalendar from '../../components/tasks/TaskCalendar';
+import PotentialTracker from '../../components/tasks/PotentialTracker';
+import { SessionStrip } from '../../components/sessions/SessionCards';
 import { useMatchStore } from '../../store/useMatchStore';
 import { useChatStore } from '../../store/useChatStore';
 import { useUserStore } from '../../store/useUserStore';
 import { useInterestStore } from '../../store/useInterestStore';
 import { useTaskStore } from '../../store/useTaskStore';
+import { useSessionStore } from '../../store/useSessionStore';
 import { listItemVariants, listVariants, reduceVariants, useReducedMotion } from '../../lib/motion';
 
 function relativeTime(timestamp) {
@@ -47,6 +50,7 @@ export default function HomePage() {
   const { profile } = useUserStore();
   const { projectTypes, myInterests, fetchProjectTypes, fetchMyInterests, selectProjectTypes } = useInterestStore();
   const { myStats, fetchMyStats } = useTaskStore();
+  const { sessions, fetchSessions } = useSessionStore();
   const reduced = useReducedMotion();
   const [shortTermModalOpen, setShortTermModalOpen] = useState(false);
   const [addingLongTerm, setAddingLongTerm] = useState(false);
@@ -57,7 +61,10 @@ export default function HomePage() {
     fetchProjectTypes().catch(console.error);
     fetchMyInterests().catch(console.error);
     fetchMyStats().catch(console.error);
+    fetchSessions().catch(console.error);
   }, []);
+
+  const weeklySession = sessions?.featured;
 
   const hasLongTerm = projectTypes.has('LONG_TERM');
   const currentShortTerm = myInterests.find((i) => i.projectType === 'SHORT_TERM');
@@ -148,6 +155,21 @@ export default function HomePage() {
           </motion.button>
         ))}
       </motion.div>
+
+      {weeklySession && (
+        <section>
+          <div className="mb-4 flex items-baseline justify-between gap-4">
+            <h2 className="font-mono text-[10px] uppercase tracking-widest text-mute">This week&rsquo;s session</h2>
+            <button
+              onClick={() => navigate('/sessions')}
+              className="rounded-sm text-xs text-mute transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+            >
+              All sessions
+            </button>
+          </div>
+          <SessionStrip session={weeklySession} />
+        </section>
+      )}
 
       <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
         {/* The one act */}
@@ -320,28 +342,7 @@ export default function HomePage() {
         <h2 className="font-mono text-[10px] uppercase tracking-widest text-mute">
           Your progress
         </h2>
-        <div className="grid grid-cols-2 divide-x divide-line overflow-hidden rounded-lg border border-line bg-surface">
-          <div className="p-4">
-            <Trophy className="h-4 w-4 text-accent-600" strokeWidth={1.8} aria-hidden="true" />
-            <p className="mt-3 font-display text-2xl font-extrabold tracking-tightest text-ink tnum">
-              {myStats?.totalPoints ?? 0}
-            </p>
-            <p className="mt-0.5 font-mono text-[10px] uppercase tracking-widest text-mute">Points</p>
-          </div>
-          <div className="p-4">
-            <Flame
-              className={myStats?.currentStreakDays > 0 ? 'h-4 w-4 text-bad' : 'h-4 w-4 text-mute'}
-              strokeWidth={1.8}
-              aria-hidden="true"
-            />
-            <p className="mt-3 font-display text-2xl font-extrabold tracking-tightest text-ink tnum">
-              {myStats?.currentStreakDays ?? 0}
-            </p>
-            <p className="mt-0.5 font-mono text-[10px] uppercase tracking-widest text-mute">
-              Day streak
-            </p>
-          </div>
-        </div>
+        <PotentialTracker stats={myStats} />
         <TaskCalendar className="max-w-none" />
       </aside>
       </div>

@@ -21,6 +21,7 @@ const navigation = [
   { name: 'Interests', href: '/admin/interests' },
   { name: 'Questions', href: '/admin/questions' },
   { name: 'Task Banks', href: '/admin/task-banks' },
+  { name: 'Sessions', href: '/admin/sessions' },
 ];
 
 export default function AdminLayout() {

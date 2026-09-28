@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -25,6 +26,14 @@ public interface TaskSubmissionRepository extends JpaRepository<TaskSubmission, 
 
     @Query("select s from TaskSubmission s join fetch s.user join fetch s.taskAssignment where s.id = :id")
     Optional<TaskSubmission> findWithUserAndAssignmentById(@Param("id") UUID id);
+
+    long countByUserId(UUID userId);
+
+    @Query("select s.submittedAt from TaskSubmission s where s.user.id = :userId")
+    List<Instant> findSubmittedAtByUserId(@Param("userId") UUID userId);
+
+    @EntityGraph(attributePaths = {"taskAssignment", "taskAssignment.taskBankItem"})
+    List<TaskSubmission> findTop3ByUserIdOrderBySubmittedAtDesc(UUID userId);
 
     @Query("""
         select s.submittedAt from TaskSubmission s

@@ -15,6 +15,7 @@ export const useAdminStore = create((set) => ({
   questions: defaultPage,
   interests: [],
   taskBanks: [],
+  sessions: [],
   loading: false,
   error: null,
 
@@ -398,6 +399,29 @@ export const useAdminStore = create((set) => ({
       set({ error: error.message, loading: false });
       throw error;
     }
+  },
+
+  fetchSessions: async () => {
+    set({ loading: true, error: null });
+    try {
+      const sessions = await api.get('/admin/sessions');
+      set({ sessions, loading: false });
+      return sessions;
+    } catch (error) {
+      set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
+  saveSession: async (id, payload) => {
+    const session = id
+      ? await api.put(`/admin/sessions/${id}`, payload)
+      : await api.post('/admin/sessions', payload);
+    return session;
+  },
+
+  deleteSession: async (id) => {
+    return api.delete(`/admin/sessions/${id}`);
   },
 
   runTaskRolloverNow: async () => {

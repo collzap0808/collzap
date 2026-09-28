@@ -4,6 +4,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.ZoneId;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -14,6 +16,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import collzap.backend.dto.TaskDtos.ActivityItem;
 import collzap.backend.dto.TaskDtos.ReviewResponse;
 import collzap.backend.dto.TaskDtos.ReviewSubmissionRequest;
 import collzap.backend.dto.TaskDtos.SubmissionResponse;
@@ -34,6 +37,7 @@ import collzap.backend.models.TaskSubmission;
 import collzap.backend.models.User;
 import collzap.backend.models.UserTaskStats;
 import collzap.backend.repositories.MatchMemberRepository;
+import collzap.backend.repositories.SessionAttendanceRepository;
 import collzap.backend.repositories.TaskAssignmentRepository;
 import collzap.backend.repositories.TaskReviewRepository;
 import collzap.backend.repositories.TaskSubmissionRepository;
@@ -57,6 +61,7 @@ public class TaskSubmissionService {
     private final TaskSubmissionRepository taskSubmissionRepository;
     private final TaskReviewRepository taskReviewRepository;
     private final UserTaskStatsRepository userTaskStatsRepository;
+    private final SessionAttendanceRepository sessionAttendanceRepository;
     private final UserService userService;
     private final NotificationService notificationService;
 
@@ -67,6 +72,7 @@ public class TaskSubmissionService {
         TaskSubmissionRepository taskSubmissionRepository,
         TaskReviewRepository taskReviewRepository,
         UserTaskStatsRepository userTaskStatsRepository,
+        SessionAttendanceRepository sessionAttendanceRepository,
         UserService userService,
         NotificationService notificationService
     ) {
@@ -76,6 +82,7 @@ public class TaskSubmissionService {
         this.taskSubmissionRepository = taskSubmissionRepository;
         this.taskReviewRepository = taskReviewRepository;
         this.userTaskStatsRepository = userTaskStatsRepository;
+        this.sessionAttendanceRepository = sessionAttendanceRepository;
         this.userService = userService;
         this.notificationService = notificationService;
     }
@@ -175,14 +182,34 @@ public class TaskSubmissionService {
         // if the last activity was today or yesterday (today's action can still save
         // it); anything older means the streak is broken and reads as 0.
         LocalDate today = LocalDate.now(TaskAssignmentService.TASK_ZONE);
+
+        int tasksDone = (int) taskSubmissionRepository.countByUserId(userId);
+        int reviewsGiven = (int) taskReviewRepository.countByReviewerId(userId);
+        int sessionsWatched = (int) sessionAttendanceRepository.countByUserIdAndCompletedAtIsNotNull(userId);
+
+        List<ActivityItem> activity = new ArrayList<>();
+        taskSubmissionRepository.findTop3ByUserIdOrderBySubmittedAtDesc(userId).forEach(s -> {
+            var item = s.getTaskAssignment().getTaskBankItem();
+            activity.add(new ActivityItem("TASK", item.getTitle(), item.getPoints(), s.getSubmittedAt()));
+        });
+        taskReviewRepository.findTop3ByReviewerIdOrderByReviewedAtDesc(userId).forEach(r -> activity.add(new ActivityItem(
+            "REVIEW", "Reviewed: " + r.getSubmission().getTaskAssignment().getTaskBankItem().getTitle(), REVIEW_POINTS, r.getReviewedAt())));
+        sessionAttendanceRepository.findTop3ByUserIdAndCompletedAtIsNotNullOrderByCompletedAtDesc(userId).forEach(a -> activity.add(new ActivityItem(
+            "SESSION", "Watched: " + a.getSession().getTitle(), a.getPointsAwarded(), a.getCompletedAt())));
+        List<ActivityItem> recent = activity.stream()
+            .sorted(Comparator.comparing(ActivityItem::at).reversed())
+            .limit(3)
+            .toList();
+
         return userTaskStatsRepository.findByUserId(userId)
             .map(s -> {
                 LocalDate last = s.getLastActivityDate();
                 boolean alive = last != null && !last.isBefore(today.minusDays(1));
                 return new UserTaskStatsResponse(
-                    s.getTotalPoints(), alive ? s.getCurrentStreakDays() : 0, s.getLongestStreakDays());
+                    s.getTotalPoints(), alive ? s.getCurrentStreakDays() : 0, s.getLongestStreakDays(),
+                    tasksDone, reviewsGiven, sessionsWatched, recent);
             })
-            .orElse(new UserTaskStatsResponse(0, 0, 0));
+            .orElse(new UserTaskStatsResponse(0, 0, 0, tasksDone, reviewsGiven, sessionsWatched, recent));
     }
 
     /**
@@ -208,6 +235,12 @@ public class TaskSubmissionService {
             .map(e -> new DayCount(e.getKey(), e.getValue().intValue()))
             .toList();
         return new TaskCalendarResponse(month.toString(), days);
+    }
+
+    /** Points for something other than a task (e.g. a watched mentoring session) — never touches the streak. */
+    @Transactional
+    public void creditPoints(User user, int points) {
+        creditActivity(user, points, false);
     }
 
     /**

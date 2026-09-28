@@ -50,6 +50,8 @@ const PeerProfilePage = lazy(() => import('./pages/profile/PeerProfilePage'));
 const SettingsPage = lazy(() => import('./pages/settings/SettingsPage'));
 const NotificationsPage = lazy(() => import('./pages/notifications/NotificationsPage'));
 const FeedbackPage = lazy(() => import('./pages/feedback/FeedbackPage'));
+const SessionsPage = lazy(() => import('./pages/sessions/SessionsPage'));
+const SessionDetailPage = lazy(() => import('./pages/sessions/SessionDetailPage'));
 const SeriousnessTestPage = lazy(() => import('./pages/test/SeriousnessTestPage'));
 
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
@@ -64,6 +66,7 @@ const AdminCollegesPage = lazy(() => import('./pages/admin/AdminCollegesPage'));
 const AdminInterestsPage = lazy(() => import('./pages/admin/AdminInterestsPage'));
 const AdminQuestionsPage = lazy(() => import('./pages/admin/AdminQuestionsPage'));
 const AdminTaskBanksPage = lazy(() => import('./pages/admin/AdminTaskBanksPage'));
+const AdminSessionsPage = lazy(() => import('./pages/admin/AdminSessionsPage'));
 
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
@@ -183,6 +186,8 @@ function App() {
                 </Route>
                 <Route path="/matches" element={<MatchesPage />} />
                 <Route path="/matches/:groupId" element={<GroupDetailPage />} />
+                <Route path="/sessions" element={<SessionsPage />} />
+                <Route path="/sessions/:sessionId" element={<SessionDetailPage />} />
                 <Route path="/profile" element={<ProfilePage />} />
                 <Route path="/profile/:userId" element={<PeerProfilePage />} />
                 <Route path="/feedback" element={<FeedbackPage />} />
@@ -208,6 +213,7 @@ function App() {
                 <Route path="/admin/interests" element={<AdminInterestsPage />} />
                 <Route path="/admin/questions" element={<AdminQuestionsPage />} />
                 <Route path="/admin/task-banks" element={<AdminTaskBanksPage />} />
+                <Route path="/admin/sessions" element={<AdminSessionsPage />} />
               </Route>
             </Route>
           </Route>

@@ -101,7 +101,15 @@ public final class TaskDtos {
     public record UserTaskStatsResponse(
         int totalPoints,
         int currentStreakDays,
-        int longestStreakDays
+        int longestStreakDays,
+        int tasksDone,
+        int reviewsGiven,
+        int sessionsWatched,
+        List<ActivityItem> recentActivity
     ) {
+    }
+
+    /** {@code kind} is TASK (a submission), REVIEW (a review the user gave) or SESSION (a mentoring session watched). */
+    public record ActivityItem(String kind, String title, int points, Instant at) {
     }
 }

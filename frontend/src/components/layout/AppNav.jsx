@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Bell, LayoutGrid, MessageSquare, User, Users } from 'lucide-react';
+import { Bell, LayoutGrid, MessageSquare, PlayCircle, User, Users } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { snappy, transition, useReducedMotion } from '../../lib/motion';
 import { LogoMark } from '../brand/Logo';
@@ -23,7 +23,7 @@ import { useNotificationStore } from '../../store/useNotificationStore';
  * And on mobile only the active item shows its label, expanding on a spring,
  * which keeps the capsule small without ever leaving you unsure where you are.
  *
- * Four primary destinations only. Everything else lives behind the avatar.
+ * Five primary destinations only. Everything else lives behind the avatar.
  */
 
 // The `note` was the old sidebar's sub-line. It has nowhere to sit in a
@@ -32,6 +32,7 @@ const NAV = [
   { name: 'Desk', href: '/home', icon: LayoutGrid, note: 'where you left off' },
   { name: 'Matches', href: '/matches', icon: Users, note: 'people, queued and found' },
   { name: 'Chat', href: '/chat', icon: MessageSquare, note: 'open threads' },
+  { name: 'Sessions', href: '/sessions', icon: PlayCircle, note: 'mentor talks for your interests' },
   { name: 'Profile', href: '/profile', icon: User, note: 'what others see' },
 ];
 
