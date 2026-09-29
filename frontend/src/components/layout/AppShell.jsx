@@ -86,6 +86,8 @@ export default function AppShell() {
   // not fade on every navigation between threads — including the bare
   // /chat index, which is the same shell with nothing open yet.
   const isChatRoom = /^\/chat(\/[^/]+)?$/.test(location.pathname);
+  // The desk is a multi-column workspace; every other route reads at prose width.
+  const isWide = location.pathname === '/home';
 
   const chromeVar = isPendingVerification ? CHROME_VAR_BANNER : CHROME_VAR;
   const pad = isPendingVerification ? PAD_UNDER_BANNER : PAD;
@@ -162,7 +164,7 @@ export default function AppShell() {
               animate={{ opacity: 1, y: 0 }}
               exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6 }}
               transition={transition(page, reduced)}
-              className={`mx-auto max-w-5xl px-5 sm:px-8 ${pad}`}
+              className={`mx-auto ${isWide ? 'max-w-7xl' : 'max-w-5xl'} px-5 sm:px-8 ${pad}`}
             >
               <Outlet />
             </motion.div>

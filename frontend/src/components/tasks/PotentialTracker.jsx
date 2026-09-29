@@ -1,27 +1,7 @@
 import { ClipboardCheck, Flame, MessageSquareText, PlayCircle } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import Badge from '../ui/Badge';
-
-const MAX_POINTS = 10000;
-
-// The six levels. `floor` is the first point value that counts as that level;
-// the percentage is simply points / 100, which is what the spec's % ranges are.
-// Only Seed's unlock exists today — the rest are shown as coming soon rather
-// than promising features that aren't built yet.
-const LEVELS = [
-  { name: 'Seed', floor: 0, tagline: 'Just getting started', unlock: 'Basic matching and chat', live: true },
-  { name: 'Sprout', floor: 2001, tagline: 'Building the habit', unlock: 'Mentorship session access' },
-  { name: 'Growing', floor: 4001, tagline: 'Actively developing skills', unlock: 'Certification eligibility' },
-  { name: 'Thriving', floor: 6001, tagline: 'Consistently delivering', unlock: 'College leaderboard' },
-  { name: 'Peak', floor: 8001, tagline: 'Among the most committed', unlock: 'Placement pool entry' },
-  { name: 'Realized', floor: 9501, tagline: 'Potential realized', unlock: 'Realized Potential badge' },
-];
-
-function levelFor(points) {
-  let idx = 0;
-  LEVELS.forEach((l, i) => { if (points >= l.floor) idx = i; });
-  return idx;
-}
+import { LEVELS, MAX_POINTS, levelIndexFor, potentialPct } from '../../lib/levels';
 
 function relativeTime(ts) {
   if (!ts) return '';
@@ -44,8 +24,8 @@ const fmt = (n) => n.toLocaleString('en-IN');
 export default function PotentialTracker({ stats, className }) {
   const points = stats?.totalPoints ?? 0;
   const streak = stats?.currentStreakDays ?? 0;
-  const pct = Math.min(100, Math.round(points / 100));
-  const idx = levelFor(points);
+  const pct = potentialPct(points);
+  const idx = levelIndexFor(points);
   const level = LEVELS[idx];
   const next = LEVELS[idx + 1];
 
