@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Code2, Palette, Rocket, Users } from 'lucide-react';
+import { ArrowDown, Code2, Palette, Rocket, Users } from 'lucide-react';
 import { lift, reveal, revealGroup, revealVariants, useReducedMotion } from '../../../lib/motion';
 import SectionLabel from '../SectionLabel';
 
@@ -176,6 +176,15 @@ export default function Problem() {
         >
           The problem isn’t a lack of people. It’s finding the right people.
         </motion.p>
+        {/* The hand-off to How it works, which starts directly below. */}
+        <motion.a
+          {...reveal(reduced, 0.15)}
+          href="#how"
+          className="group mt-4 inline-flex max-w-2xl items-center gap-2 rounded-sm text-base leading-relaxed text-mute transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+        >
+          CollZap turns that problem into a simple path to finding the right people.
+          <ArrowDown className="h-4 w-4 shrink-0 text-accent-600 transition-transform duration-200 group-hover:translate-y-0.5" aria-hidden="true" />
+        </motion.a>
       </div>
     </section>
   );

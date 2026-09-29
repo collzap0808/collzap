@@ -14,9 +14,10 @@ const COLUMNS = [
   {
     heading: 'Product',
     links: [
+      { href: '/#problem', label: 'The problem' },
+      { href: '/#how', label: 'How it works' },
       { href: '/#who', label: "Who it's for" },
       { href: '/#why', label: 'Why CollZap' },
-      { href: '/#how', label: 'How it works' },
       { href: '/#momentum', label: 'After the match' },
     ],
   },

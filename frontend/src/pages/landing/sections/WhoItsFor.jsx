@@ -33,7 +33,7 @@ export default function WhoItsFor() {
   const reduced = useReducedMotion();
 
   return (
-    <section id="who" className="scroll-mt-20 bg-paper py-24 sm:py-32">
+    <section id="who" className="scroll-mt-20 border-t border-line bg-paper py-24 sm:py-32">
       <div className="mx-auto max-w-6xl px-6 sm:px-8">
         <motion.div {...reveal(reduced)} className="max-w-2xl">
           <SectionLabel>Who is CollZap for?</SectionLabel>

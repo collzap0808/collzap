@@ -3,9 +3,9 @@ import { useLenis } from '../../lib/useLenis';
 import Nav from './sections/Nav';
 import Hero from './sections/Hero';
 import Problem from './sections/Problem';
+import HowItWorks from './sections/HowItWorks';
 import WhoItsFor from './sections/WhoItsFor';
 import WhyCollZap from './sections/WhyCollZap';
-import HowItWorks from './sections/HowItWorks';
 import Circles from './sections/Circles';
 import DailyMomentum from './sections/DailyMomentum';
 import Trust from './sections/Trust';
@@ -111,9 +111,9 @@ export default function LandingPage() {
       <main>
         <Hero />
         <Problem />
+        <HowItWorks />
         <WhoItsFor />
         <WhyCollZap />
-        <HowItWorks />
         <Circles />
         <DailyMomentum />
         <Trust />

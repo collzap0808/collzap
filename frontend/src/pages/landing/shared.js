@@ -31,9 +31,10 @@ export function usePrimaryCta() {
  * page and go nowhere. Each hash must match an `id` on a landing section.
  */
 export const HOME_SECTIONS = [
+  { href: '/#problem', label: 'The problem' },
+  { href: '/#how', label: 'How it works' },
   { href: '/#who', label: "Who it's for" },
   { href: '/#why', label: 'Why CollZap' },
-  { href: '/#how', label: 'How it works' },
   { href: '/#momentum', label: 'After the match' },
 ];
 
