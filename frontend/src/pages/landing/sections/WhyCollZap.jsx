@@ -32,7 +32,7 @@ const DIFFERENTIATORS = [
   'Interest-Based Circles',
   'Seriousness Assessment',
   'Daily Tasks & Streaks',
-  '1-on-1, Groups, Societies & Communities',
+  '1-on-1, Small Groups & Societies',
   'Designed Exclusively for Students',
 ];
 

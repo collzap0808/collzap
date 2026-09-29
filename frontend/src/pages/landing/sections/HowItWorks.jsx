@@ -1,6 +1,6 @@
 import { motion } from 'motion/react';
 import {
-  BadgeCheck, Briefcase, Building2, CreditCard, Flame, Landmark, Layers, Mail, Receipt, Sparkles, Target,
+  BadgeCheck, Briefcase, CreditCard, Flame, Landmark, Layers, Mail, Receipt, Sparkles, Target,
   TrendingUp, User, Users,
 } from 'lucide-react';
 import {
@@ -34,7 +34,6 @@ const VERIFY_OPTIONS = [
 const CIRCLE_TYPES = [
   { icon: User, label: '1-on-1 Partner' },
   { icon: Users, label: 'Small Group' },
-  { icon: Building2, label: 'Community' },
   { icon: Landmark, label: 'Society' },
 ];
 
@@ -167,7 +166,7 @@ function StepExtra({ kind }) {
 
   if (kind === 'circles') {
     return (
-      <ul className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <ul className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
         {CIRCLE_TYPES.map((c) => (
           <li key={c.label} className="flex items-center gap-2 rounded border border-line bg-surface-2 px-3 py-2.5">
             <c.icon className="h-4 w-4 shrink-0 text-accent-700" strokeWidth={1.8} aria-hidden="true" />
