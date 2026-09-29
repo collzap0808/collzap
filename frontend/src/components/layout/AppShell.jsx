@@ -94,6 +94,8 @@ export default function AppShell() {
   const isChatRoom = /^\/chat(\/[^/]+)?$/.test(location.pathname);
   // The desk is a multi-column workspace; every other route reads at prose width.
   const isWide = location.pathname === '/home';
+  // Profiles are two columns under a full-width header — wider than prose, narrower than the desk.
+  const isProfile = location.pathname === '/profile' || location.pathname.startsWith('/profile/');
 
   const tightChat = isChatRoom && !isPendingVerification;
   const chromeVar = isPendingVerification ? CHROME_VAR_BANNER : tightChat ? CHAT_CHROME_VAR : CHROME_VAR;
@@ -171,7 +173,7 @@ export default function AppShell() {
               animate={{ opacity: 1, y: 0 }}
               exit={reduced ? { opacity: 0 } : { opacity: 0, y: -6 }}
               transition={transition(page, reduced)}
-              className={`mx-auto ${isWide ? 'max-w-7xl' : 'max-w-5xl'} px-5 sm:px-8 ${pad}`}
+              className={`mx-auto ${isWide ? 'max-w-7xl' : isProfile ? 'max-w-6xl' : 'max-w-5xl'} px-5 sm:px-8 ${pad}`}
             >
               <Outlet />
             </motion.div>

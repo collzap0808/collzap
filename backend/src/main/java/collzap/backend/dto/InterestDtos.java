@@ -76,6 +76,10 @@ public final class InterestDtos {
     ) {
     }
 
+    /** One interest and how many other students on your campus picked it. */
+    public record CampusInterestCount(UUID interestId, String interestName, InterestCategory category, long students) {
+    }
+
     public record UserInterestResponse(
         UUID interestId,
         String interestName,

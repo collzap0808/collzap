@@ -38,4 +38,21 @@ public interface UserInterestSelectionRepository extends JpaRepository<UserInter
     long countByUserIdAndProjectType(UUID userId, ProjectType projectType);
 
     long countByInterestId(UUID interestId);
+
+    /**
+     * Per interest: how many other verified, active students at one college
+     * picked it. Rows are [interestId, interestName, category, count].
+     */
+    @Query("""
+        select s.interest.id, s.interest.name, s.interest.category, count(distinct s.user.id)
+        from UserInterestSelection s
+        where s.user.college.id = :collegeId
+          and s.user.id <> :userId
+          and s.user.verificationStatus = collzap.backend.enums.VerificationStatus.APPROVED
+          and s.user.accountStatus = collzap.backend.enums.Status.ACTIVE
+          and s.interest.active = true
+        group by s.interest.id, s.interest.name, s.interest.category
+        order by count(distinct s.user.id) desc, s.interest.name asc
+        """)
+    List<Object[]> countCampusStudentsByInterest(@Param("collegeId") UUID collegeId, @Param("userId") UUID userId);
 }

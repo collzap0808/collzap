@@ -1,38 +1,38 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { Search } from 'lucide-react';
+import { UserPlus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
-import Tabs from '../../components/ui/Tabs';
-import EmptyChair from '../../components/EmptyChair';
 import ConnectionField from '../../components/brand/ConnectionField';
 import { LogoMark } from '../../components/brand/Logo';
+import { api } from '../../api/api';
 import { useMatchStore } from '../../store/useMatchStore';
 import { useUserStore } from '../../store/useUserStore';
-import { lift, snappy, page, useReducedMotion, transition } from '../../lib/motion';
+import { useInterestStore } from '../../store/useInterestStore';
+import { page, useReducedMotion, transition } from '../../lib/motion';
+import ChatDrawer from '../chat/ChatDrawer';
+import ShortTermInterestModal from '../home/ShortTermInterestModal';
+import {
+  ExploreSection, FilterBar, GroupCard, MatchTabs, NoMatchesYet, PersonCard, SummaryRow, WaitingCard, WhyMatch,
+} from './MatchSections';
+import { peopleFromCircle } from './matchData';
 
-// Long enough that the matcher's own latency doesn't make this flash.
+// Long enough that the search's own latency doesn't make the overlay flash.
 const SEARCH_MIN_MS = 1400;
-
-const formatWaiting = (seconds) => {
-  if (seconds == null) return null;
-  if (seconds < 60) return `${seconds}s`;
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h`;
-  return `${Math.floor(seconds / 86400)}d`;
-};
 
 const OUTCOME_COPY = {
   MATCHED: { variant: 'success', label: 'Matched' },
-  QUEUED: { variant: 'warning', label: 'In queue' },
+  QUEUED: { variant: 'warning', label: 'Waiting' },
   ALREADY_MATCHED: { variant: 'secondary', label: 'Already in' },
 };
 
+const NO_FILTERS = { q: '', interest: '', level: '', year: '' };
+
 /**
- * The matcher running, as the brand's own visual. Same ConnectionField the
+ * The search running, as the brand's own visual. Same ConnectionField the
  * auth screen uses, so this reads as one product rather than a spinner.
  */
 function SearchingOverlay({ open }) {
@@ -75,7 +75,7 @@ function SearchingOverlay({ open }) {
               Finding your people…
             </p>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-[#A8BDD8]">
-              Matching on your interests, your level band and your campus.
+              Matching on your interests, your skill level and your campus.
             </p>
 
             <div className="mt-8 flex items-center gap-2" aria-hidden="true">
@@ -96,62 +96,73 @@ function SearchingOverlay({ open }) {
   );
 }
 
-function GroupCard({ group, onClick }) {
-  const reduced = useReducedMotion();
-  return (
-    <motion.button
-      onClick={onClick}
-      whileHover={lift(reduced)}
-      whileTap={reduced ? undefined : { scale: 0.995 }}
-      transition={transition(snappy, reduced)}
-      className="group relative w-full overflow-hidden rounded-lg border border-line bg-surface p-5 text-left shadow-sm transition-[box-shadow,border-color] duration-200 hover:border-accent-300 hover:shadow-glow-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-paper"
-    >
-      <span className="grad-brand absolute inset-x-0 top-0 h-0.5 origin-left scale-x-0 transition-transform duration-300 group-hover:scale-x-100" />
-
-      <div className="flex items-start justify-between gap-3">
-        <span className="font-mono text-[10px] uppercase tracking-widest text-mute">
-          {group.connectionType}
-        </span>
-        <Badge variant="secondary">{group.levelBand}</Badge>
-      </div>
-
-      <h3 className="mt-4 truncate font-display text-xl font-bold tracking-tight text-ink" title={group.interestName}>
-        {group.interestName}
-      </h3>
-
-      <div className="mt-4 flex items-baseline justify-between border-t border-line pt-3">
-        <span className="text-xs text-mute tnum">
-          {group.memberCount} of {group.maxMembers} seats
-        </span>
-        <span className="text-xs text-accent-700 opacity-0 transition-opacity group-hover:opacity-100">
-          Open →
-        </span>
-      </div>
-    </motion.button>
-  );
+function useMediaQuery(query) {
+  const [matches, setMatches] = useState(() => window.matchMedia?.(query).matches ?? false);
+  useEffect(() => {
+    const mq = window.matchMedia?.(query);
+    if (!mq) return undefined;
+    const onChange = (e) => setMatches(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, [query]);
+  return matches;
 }
 
+/**
+ * Matches: the people and groups the matcher placed you with, why, and what
+ * the rest of campus is into. Matching itself is automatic — Find peers places
+ * you per interest — so there are no scores or connect requests here, only the
+ * real reasons and the real next step (Message).
+ */
 export default function MatchesPage() {
   const navigate = useNavigate();
   const { circle, fetchCircle, findMatches, loading } = useMatchStore();
   const { profile, fetchMe } = useUserStore();
-  const [activeTab, setActiveTab] = useState('CONNECTIONS');
+  const { myInterests, fetchMyInterests } = useInterestStore();
+  const [activeTab, setActiveTab] = useState('PEOPLE');
+  const [filters, setFilters] = useState(NO_FILTERS);
   const [matchResults, setMatchResults] = useState(null);
   const [searching, setSearching] = useState(false);
+  const [openPerson, setOpenPerson] = useState(null);
+  const [goalOpen, setGoalOpen] = useState(false);
+  const [campus, setCampus] = useState(null);
   const searchTimer = useRef(null);
   const reduced = useReducedMotion();
+  const tabletUp = useMediaQuery('(min-width: 768px)');
 
   useEffect(() => {
     fetchCircle().catch(console.error);
+    fetchMyInterests().catch(() => {});
     if (!profile) fetchMe().catch(console.error);
+    api.get('/interests/campus').then(setCampus).catch(() => setCampus([]));
   }, []);
 
   // The overlay is dismissed on a timer, which can outlive the page.
   useEffect(() => () => clearTimeout(searchTimer.current), []);
 
   const isVerified = profile?.verificationStatus === 'APPROVED';
-  const connections = circle?.connections || [];
+  const connections = useMemo(() => circle?.connections || [], [circle]);
   const waiting = circle?.waiting || [];
+  const people = useMemo(() => peopleFromCircle(connections), [connections]);
+  const mine = useMemo(
+    () => new Set((Array.isArray(myInterests) ? myInterests : []).map((i) => i.interestName || i.name)),
+    [myInterests]
+  );
+
+  const filterOptions = useMemo(() => ({
+    interests: [...new Set(people.flatMap((p) => p.groups.map((g) => g.interestName)))].sort(),
+    levels: ['BEGINNER', 'LEARNING', 'INTERMEDIATE', 'EXPERT'].filter((l) => people.some((p) => p.level === l)),
+    years: [...new Set(people.map((p) => p.yearOfStudy).filter(Boolean))].sort((a, b) => a - b),
+  }), [people]);
+
+  const q = filters.q.trim().toLowerCase();
+  const shownPeople = people.filter((p) => {
+    if (q && !p.name.toLowerCase().includes(q)) return false;
+    if (filters.interest && !p.groups.some((g) => g.interestName === filters.interest)) return false;
+    if (filters.level && p.level !== filters.level) return false;
+    if (filters.year && String(p.yearOfStudy) !== filters.year) return false;
+    return true;
+  });
 
   const handleFindMatches = async () => {
     if (!isVerified) {
@@ -171,13 +182,13 @@ export default function MatchesPage() {
       } else {
         onDone = () => {
           setMatchResults(results);
-          toast.error('No active interests to match on.');
+          toast.error('Pick an interest first, then we can find you peers.');
         };
       }
     } catch (error) {
-      onDone = () => toast.error(error.message || 'The matcher did not run');
+      onDone = () => toast.error(error.message || 'Could not find peers right now');
     } finally {
-      // Hold the overlay a beat so a fast matcher doesn't just blink.
+      // Hold the overlay a beat so a fast search doesn't just blink.
       const wait = reduced ? 0 : Math.max(0, SEARCH_MIN_MS - (Date.now() - startedAt));
       searchTimer.current = setTimeout(() => {
         setSearching(false);
@@ -186,52 +197,58 @@ export default function MatchesPage() {
     }
   };
 
-  const tabs = [
-    { key: 'CONNECTIONS', label: `Connections (${connections.length})` },
-    { key: 'WAITING', label: `Waiting (${waiting.length})` },
+  const locked = !!profile && !isVerified;
+  const summary = [
+    { label: 'People matched', value: people.length },
+    { label: 'New this week', value: people.filter((p) => p.isNew).length },
+    { label: 'Waiting', value: waiting.length },
+    { label: 'Groups & pairs', value: connections.length },
   ];
-
-  const shown = activeTab === 'CONNECTIONS' ? connections : waiting;
+  const tabs = [
+    { key: 'PEOPLE', label: 'Your people', count: people.length },
+    { key: 'GROUPS', label: 'Groups', count: connections.length },
+    { key: 'WAITING', label: 'Waiting', count: waiting.length },
+  ];
+  const empty = (
+    <NoMatchesYet onFind={handleFindMatches} onUpdateGoal={() => setGoalOpen(true)} finding={searching} locked={locked} />
+  );
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-8">
       <SearchingOverlay open={searching} />
 
-      <header className="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tightest text-ink">
-            Matches
-          </h1>
-          <p className="mt-3 max-w-md text-sm leading-relaxed text-mute">
-            The matcher looks at your interests, your level band and your campus.
-            Run it whenever — it will not double-match you.
+      <header className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="font-display text-[32px] font-extrabold leading-tight tracking-tightest text-ink">Matches</h1>
+          <p className="mt-1.5 text-[15px] font-medium text-ink/85">Find students who share your interests, goals, and campus.</p>
+          <p className="mt-1 max-w-xl text-sm text-mute">
+            Your matches are based on your interests, skill level, and what you&rsquo;re looking to work on.
           </p>
         </div>
         <Button
           onClick={handleFindMatches}
           loading={loading || searching}
           variant="gradient"
-          icon={<Search className="h-4 w-4" />}
-          size="lg"
+          icon={<UserPlus className="h-4 w-4" />}
           className="shrink-0"
         >
           Find peers
         </Button>
       </header>
 
-      {!isVerified && profile && (
-        <p className="border-l-2 border-wait pl-4 text-sm text-mute">
-          Your ID is still with a reviewer. Matching stays locked until then.{' '}
+      {locked && (
+        <p className="rounded-lg border border-wait/30 bg-wait/[0.07] px-4 py-3 text-sm text-ink">
+          Your ID is still with a reviewer. Matching unlocks once it&rsquo;s approved.{' '}
           <button
             onClick={() => navigate('/onboarding')}
-            className="text-accent-700 underline decoration-accent-300 underline-offset-4 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+            className="rounded-sm font-semibold text-accent-700 underline decoration-accent-300 underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
           >
-            Status
+            Check status
           </button>
         </p>
       )}
 
-      {/* Run output */}
+      {/* What the last Find peers run did, per interest. */}
       <AnimatePresence>
         {matchResults && matchResults.length > 0 && (
           <motion.section
@@ -239,33 +256,33 @@ export default function MatchesPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
             transition={transition(page, reduced)}
+            className="rounded-lg border border-line bg-surface p-4"
+            aria-label="Latest search"
           >
-            <h2 className="mb-4 font-mono text-[10px] uppercase tracking-widest text-mute">
-              Last run
-            </h2>
-            <ul className="divide-y divide-line border-y border-line">
+            <div className="mb-1 flex items-center justify-between gap-3">
+              <h2 className="text-sm font-bold text-ink">Latest search</h2>
+              <button
+                onClick={() => setMatchResults(null)}
+                aria-label="Dismiss"
+                className="grid h-7 w-7 place-items-center rounded-md text-mute hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+              >
+                <X className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+            <ul className="divide-y divide-line">
               {matchResults.map((result, idx) => {
                 const meta = OUTCOME_COPY[result.outcome] || OUTCOME_COPY.QUEUED;
                 return (
-                  <li key={`${result.interestId}-${idx}`} className="flex items-center justify-between gap-4 py-4">
+                  <li key={`${result.interestId}-${idx}`} className="flex items-center justify-between gap-4 py-2.5">
                     <div className="min-w-0">
-                      <div className="flex items-center gap-3">
-                        <span className="truncate text-sm font-medium text-ink">
-                          {result.interestName}
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <span className="truncate text-sm font-medium text-ink">{result.interestName}</span>
                         <Badge variant={meta.variant}>{meta.label}</Badge>
                       </div>
-                      {result.message && (
-                        <p className="mt-1 truncate text-xs text-mute">{result.message}</p>
-                      )}
+                      {result.message && <p className="mt-0.5 truncate text-xs text-mute">{result.message}</p>}
                     </div>
                     {result.outcome === 'MATCHED' && result.group?.chatRoomId && (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="shrink-0"
-                        onClick={() => navigate(`/chat/${result.group.chatRoomId}`)}
-                      >
+                      <Button variant="secondary" size="sm" className="shrink-0" onClick={() => navigate(`/chat/${result.group.chatRoomId}`)}>
                         Open chat
                       </Button>
                     )}
@@ -277,56 +294,61 @@ export default function MatchesPage() {
         )}
       </AnimatePresence>
 
-      <section>
-        <Tabs tabs={tabs} active={activeTab} onChange={setActiveTab} className="mb-8" />
+      <SummaryRow items={summary} />
 
-        {shown.length === 0 ? (
-          <div className="flex flex-col items-center py-12 text-center">
-            <EmptyChair className="h-32 w-32 text-mute" />
-            <p className="mt-6 font-display text-xl font-bold tracking-tight text-ink">
-              {activeTab === 'CONNECTIONS' ? 'Nobody across from you yet.' : 'Not waiting on anything.'}
-            </p>
-            <p className="mt-2 max-w-xs text-sm text-mute">
-              {activeTab === 'CONNECTIONS'
-                ? 'Run the matcher and the seat gets filled when someone fits.'
-                : 'When a match needs one more person, it parks here.'}
-            </p>
-          </div>
-        ) : activeTab === 'CONNECTIONS' ? (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {connections.map((group) => (
-              <GroupCard
-                key={group.id}
-                group={group}
-                onClick={() => navigate(`/matches/${group.id}`)}
-              />
-            ))}
-          </div>
-        ) : (
-          <ul className="divide-y divide-line border-y border-line">
-            {waiting.map((group) => (
-              <li key={group.id} className="flex items-center justify-between gap-4 py-4">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-ink">{group.interestName}</p>
-                  <p className="mt-0.5 font-mono text-[10px] uppercase tracking-widest text-mute">
-                    {group.connectionType} · {group.levelBand}
-                  </p>
-                </div>
-                <div className="flex shrink-0 items-center gap-4">
-                  <span className="text-xs text-mute tnum">
-                    {group.memberCount}/{group.maxMembers}
-                  </span>
-                  {formatWaiting(group.waitingSeconds) && (
-                    <span className="font-mono text-[10px] uppercase tracking-widest text-wait tnum">
-                      {formatWaiting(group.waitingSeconds)}
-                    </span>
-                  )}
-                </div>
-              </li>
-            ))}
+      <section className="space-y-4" aria-label="Your matches">
+        <MatchTabs tabs={tabs} active={activeTab} onChange={setActiveTab} />
+
+        {activeTab === 'PEOPLE' && (people.length === 0 ? empty : (
+          <>
+            <FilterBar filters={filters} setFilters={setFilters} {...filterOptions} />
+            {shownPeople.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-sm text-mute">
+                Nobody matches those filters.{' '}
+                <button onClick={() => setFilters(NO_FILTERS)} className="rounded-sm font-semibold text-accent-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
+                  Clear filters
+                </button>
+              </p>
+            ) : (
+              <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {shownPeople.map((p) => <PersonCard key={p.userId} person={p} onOpen={() => setOpenPerson(p)} />)}
+              </ul>
+            )}
+          </>
+        ))}
+
+        {activeTab === 'GROUPS' && (connections.length === 0 ? empty : (
+          <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {connections.map((g) => <GroupCard key={g.id} group={g} />)}
           </ul>
-        )}
+        ))}
+
+        {activeTab === 'WAITING' && (waiting.length === 0 ? (
+          <p className="rounded-lg border border-dashed border-line px-4 py-6 text-center text-sm text-mute">
+            Not waiting on anything. When an interest needs one more person, it shows up here.
+          </p>
+        ) : (
+          <ul className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            {waiting.map((g) => <WaitingCard key={g.id} group={g} />)}
+          </ul>
+        ))}
       </section>
+
+      <ExploreSection counts={campus} mine={mine} onPickShortTerm={() => setGoalOpen(true)} />
+
+      <ChatDrawer
+        open={!!openPerson}
+        onClose={() => setOpenPerson(null)}
+        side={tabletUp ? 'right' : 'bottom'}
+        title="Why you match"
+      >
+        {openPerson && <WhyMatch person={openPerson} />}
+      </ChatDrawer>
+
+      <ShortTermInterestModal
+        open={goalOpen}
+        onClose={() => { setGoalOpen(false); fetchMyInterests().catch(() => {}); }}
+      />
     </div>
   );
 }

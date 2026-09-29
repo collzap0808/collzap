@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import collzap.backend.dto.CommonDtos.MessageResponse;
+import collzap.backend.dto.InterestDtos.CampusInterestCount;
 import collzap.backend.dto.InterestDtos.InterestCatalogResponse;
 import collzap.backend.dto.InterestDtos.InterestFeedbackRequest;
 import collzap.backend.dto.InterestDtos.SelectInterestsRequest;
@@ -39,6 +40,12 @@ public class InterestController {
     @GetMapping("/catalog")
     public InterestCatalogResponse catalog() {
         return interestService.catalog();
+    }
+
+    /** Student counts per interest on the caller's campus, for Explore on Matches. */
+    @GetMapping("/campus")
+    public List<CampusInterestCount> campus(@AuthenticationPrincipal AuthPrincipal me) {
+        return interestService.campusCounts(me.userId());
     }
 
     @GetMapping("/me")

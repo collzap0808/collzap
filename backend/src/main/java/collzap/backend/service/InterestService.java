@@ -12,6 +12,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import collzap.backend.dto.InterestDtos.CampusInterestCount;
 import collzap.backend.dto.InterestDtos.InterestCatalogResponse;
 import collzap.backend.dto.InterestDtos.InterestFeedbackRequest;
 import collzap.backend.dto.InterestDtos.InterestResponse;
@@ -131,6 +132,21 @@ public class InterestService {
             }
         }
         return new ProjectTypesResponse(requested);
+    }
+
+    /**
+     * What other verified students on the caller's campus are into — counts
+     * only, never names, so it can't be used to browse people.
+     */
+    @Transactional(readOnly = true)
+    public List<CampusInterestCount> campusCounts(UUID userId) {
+        var user = userService.requireSelf(userId);
+        if (user.getCollege() == null) {
+            return List.of();
+        }
+        return selectionRepository.countCampusStudentsByInterest(user.getCollege().getId(), userId).stream()
+            .map(r -> new CampusInterestCount((UUID) r[0], (String) r[1], (InterestCategory) r[2], (Long) r[3]))
+            .toList();
     }
 
     @Transactional(readOnly = true)

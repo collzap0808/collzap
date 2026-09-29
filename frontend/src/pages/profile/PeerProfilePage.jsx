@@ -1,22 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, MessageSquare, MoreHorizontal, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
-import Avatar from '../../components/ui/Avatar';
-import Badge from '../../components/ui/Badge';
 import Button from '../../components/ui/Button';
+import Dropdown from '../../components/ui/Dropdown';
 import Modal from '../../components/ui/Modal';
 import TextArea from '../../components/ui/TextArea';
 import Spinner from '../../components/ui/Spinner';
 import { useUserStore } from '../../store/useUserStore';
 import { useModerationStore } from '../../store/useModerationStore';
 import { useAuthStore } from '../../store/useAuthStore';
-
-const PROMPTS = [
-  { key: 'storyPrompt1', q: 'What are you actually into?' },
-  { key: 'storyPrompt2', q: "What's open on your laptop right now?" },
-  { key: 'storyPrompt3', q: 'One thing people find out about you late' },
-];
+import { useChatStore } from '../../store/useChatStore';
+import { AboutCard, CurrentGoal, FunFact, LookingToWorkOn, ProfileHeader, SkillsCard } from './ProfileSections';
+import { normaliseInterests } from './profileData';
 
 export default function PeerProfilePage() {
   const { userId } = useParams();
@@ -24,6 +20,7 @@ export default function PeerProfilePage() {
 
   const { peerProfile, fetchPeerProfile, loading } = useUserStore();
   const { blockUser, reportUser, loading: moderationLoading } = useModerationStore();
+  const { chatList, fetchChatList } = useChatStore();
 
   const [reportModalOpen, setReportModalOpen] = useState(false);
   const [blockModalOpen, setBlockModalOpen] = useState(false);
@@ -36,6 +33,13 @@ export default function PeerProfilePage() {
 
   // The store keeps a single peerProfile, populated by fetchPeerProfile below.
   const profile = peerProfile?.id === userId ? peerProfile : null;
+  const interests = useMemo(() => normaliseInterests(profile?.interests), [profile]);
+
+  // A conversation you already share with them — 1:1 first, else any group.
+  const sharedChat = useMemo(() => {
+    const rooms = (Array.isArray(chatList) ? chatList : []).filter((c) => c.members?.some((m) => m.userId === userId));
+    return rooms.find((c) => c.type === 'ONE_ON_ONE') || rooms[0] || null;
+  }, [chatList, userId]);
 
   useEffect(() => {
     if (myId && userId === myId) {
@@ -43,6 +47,7 @@ export default function PeerProfilePage() {
       return;
     }
     setLoaded(false);
+    fetchChatList().catch(() => {});
     fetchPeerProfile(userId)
       .catch(() => {
         toast.error('Could not load that profile');
@@ -90,98 +95,59 @@ export default function PeerProfilePage() {
     return <p className="py-24 text-center text-sm text-mute">No such profile.</p>;
   }
 
+  const goal = interests.find((i) => i.projectType === 'SHORT_TERM');
+  const firstName = profile.name?.split(' ')[0];
+
+  const actions = (
+    <>
+      {sharedChat ? (
+        <Button size="sm" icon={<MessageSquare className="h-4 w-4" />} onClick={() => navigate(`/chat/${sharedChat.chatRoomId}`)}>
+          Message
+        </Button>
+      ) : (
+        <Button size="sm" variant="secondary" icon={<Users className="h-4 w-4" />} onClick={() => navigate('/matches')}>
+          Find matches
+        </Button>
+      )}
+      <Dropdown
+        align="right"
+        label="More options"
+        trigger={(
+          <span className="grid h-9 w-9 place-items-center rounded-md border border-line text-mute transition-colors hover:text-ink">
+            <MoreHorizontal className="h-4 w-4" aria-hidden="true" />
+          </span>
+        )}
+        items={[
+          { label: 'Report', onClick: () => setReportModalOpen(true) },
+          { label: 'Block', onClick: () => setBlockModalOpen(true), danger: true },
+        ]}
+      />
+    </>
+  );
+
   return (
-    <div className="space-y-12">
+    <div className="space-y-5">
       <button
         onClick={() => navigate(-1)}
-        className="inline-flex items-center text-sm text-mute transition-colors hover:text-ink rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+        className="inline-flex items-center rounded-sm text-sm text-mute transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
       >
         <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden="true" />
         Back
       </button>
 
-      <header className="flex items-center gap-5">
-        <Avatar src={profile.profilePhotoUrl} name={profile.name} size="2xl" />
-        <div className="min-w-0">
-          <h1 className="font-display text-4xl font-extrabold leading-tight tracking-tightest text-ink">
-            {profile.name}
-          </h1>
-          <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-mute">
-            {profile.collegeName}
-            {profile.yearOfStudy ? ` · Year ${profile.yearOfStudy}` : ''}
-            {profile.course ? ` · ${profile.course}` : ''}
-            {profile.city ? ` · ${profile.city}` : ''}
-          </p>
+      <ProfileHeader profile={profile} interests={interests} actions={actions} />
+
+      {/* One flow on phones (priority order via `order`), two columns from lg. */}
+      <div className="flex flex-col gap-5 lg:grid lg:grid-cols-2 lg:items-start">
+        <div className="contents lg:flex lg:flex-col lg:gap-5">
+          <div className="order-4 empty:hidden lg:order-none"><AboutCard profile={profile} /></div>
+          <div className="order-3 empty:hidden lg:order-none"><SkillsCard interests={interests} /></div>
         </div>
-      </header>
-
-      <div className="grid grid-cols-1 gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)]">
-        <div className="space-y-10">
-          {profile.interests?.length > 0 && (
-            <section>
-              <h2 className="mb-4 font-mono text-[10px] uppercase tracking-widest text-mute">
-                Works on
-              </h2>
-              <ul className="divide-y divide-line border-y border-line">
-                {/* PeerInterest has no id — key on the natural pair. */}
-                {profile.interests.map((i) => (
-                  <li key={`${i.interestName}-${i.projectType}`} className="flex items-baseline justify-between gap-3 py-3">
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm text-ink">{i.interestName}</span>
-                      {i.subTag && (
-                        <span className="mt-0.5 block truncate text-xs text-mute">{i.subTag}</span>
-                      )}
-                    </span>
-                    <Badge variant="secondary">{i.level}</Badge>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-
-          {profile.proofOfWorkUrl && (
-            <section>
-              <h2 className="mb-3 font-mono text-[10px] uppercase tracking-widest text-mute">
-                Proof of work
-              </h2>
-              <a
-                href={profile.proofOfWorkUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="break-all text-sm text-accent-700 underline decoration-accent-300 underline-offset-4 hover:text-accent-800 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
-              >
-                {profile.proofOfWorkUrl}
-              </a>
-            </section>
-          )}
+        <div className="contents lg:flex lg:flex-col lg:gap-5">
+          <div className="order-1 empty:hidden lg:order-none"><LookingToWorkOn interests={interests} nowText={profile.storyPrompt2} name={firstName} /></div>
+          <div className="order-2 empty:hidden lg:order-none"><CurrentGoal goal={goal} /></div>
+          <div className="order-5 empty:hidden lg:order-none"><FunFact text={profile.storyPrompt3} /></div>
         </div>
-
-        <section>
-          <h2 className="mb-4 font-mono text-[10px] uppercase tracking-widest text-mute">
-            In their words
-          </h2>
-          <div className="divide-y divide-line border-y border-line">
-            {PROMPTS.map(({ key, q }) => (
-              <div key={key} className="py-5">
-                <p className="text-xs text-mute">{q}</p>
-                <p className="mt-2 text-sm leading-relaxed text-ink">
-                  {profile[key] || <span className="italic text-mute/60">Left blank.</span>}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {profile.id !== useAuthStore.getState().user?.id && (
-            <div className="mt-10 flex gap-3">
-              <Button variant="ghost" size="sm" onClick={() => setReportModalOpen(true)}>
-                Report
-              </Button>
-              <Button variant="ghost" size="sm" className="text-bad hover:bg-bad/[0.07]" onClick={() => setBlockModalOpen(true)}>
-                Block
-              </Button>
-            </div>
-          )}
-        </section>
       </div>
 
       <Modal open={blockModalOpen} onClose={() => setBlockModalOpen(false)} title="Block this person">
