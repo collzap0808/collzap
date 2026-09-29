@@ -29,6 +29,12 @@ const CHROME_VAR = '[--app-chrome:13rem] md:[--app-chrome:8.5rem]';
 const CHROME_VAR_BANNER =
   '[--app-chrome:calc(14.5rem_+_var(--app-banner,0px))] md:[--app-chrome:calc(10rem_+_var(--app-banner,0px))]';
 const PAD = 'pt-24 pb-28 md:pt-24 md:pb-10';
+// Chat on a phone: there is no top capsule there (the nav floats at the
+// bottom), so the room only needs a hairline gap above and clearance for the
+// bottom capsule below — every other rem is taken from the conversation.
+//   mobile  pt-3 (0.75rem) + pb-20 (5rem) = 5.75rem · desktop as PAD
+const CHAT_CHROME_VAR = '[--app-chrome:5.75rem] md:[--app-chrome:8.5rem]';
+const CHAT_PAD = 'pt-3 pb-20 md:pt-24 md:pb-10';
 // Under the banner the page only needs a gap, not the full capsule clearance —
 // the banner's wrapper already took that.
 const PAD_UNDER_BANNER = 'pt-6 pb-28 md:pb-10';
@@ -89,8 +95,9 @@ export default function AppShell() {
   // The desk is a multi-column workspace; every other route reads at prose width.
   const isWide = location.pathname === '/home';
 
-  const chromeVar = isPendingVerification ? CHROME_VAR_BANNER : CHROME_VAR;
-  const pad = isPendingVerification ? PAD_UNDER_BANNER : PAD;
+  const tightChat = isChatRoom && !isPendingVerification;
+  const chromeVar = isPendingVerification ? CHROME_VAR_BANNER : tightChat ? CHAT_CHROME_VAR : CHROME_VAR;
+  const pad = isPendingVerification ? PAD_UNDER_BANNER : tightChat ? CHAT_PAD : PAD;
 
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-paper">
@@ -153,7 +160,7 @@ export default function AppShell() {
           // client's does; a capped width here is just more dead margin on
           // a laptop screen, where every other (single-column, prose-width)
           // route still wants the cap.
-          <div className={`px-5 sm:px-8 ${pad}`}>
+          <div className={`px-3 sm:px-8 ${pad}`}>
             <Outlet />
           </div>
         ) : (

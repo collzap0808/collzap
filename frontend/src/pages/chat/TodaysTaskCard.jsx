@@ -148,11 +148,13 @@ function ReviewNote({ review }) {
 }
 
 /**
- * Slots into GroupDetailPage right after the header. Any active member may
+ * The full task: brief, submission form, and everyone's work to review. The
+ * chat opens it in a focused view from the workspace (`bare`, and no refresh of
+ * its own — the workspace already polls). Any active member may
  * review any other active member's submission — there's no fixed pairing, so
  * this same component works whether the group has 2 people or 40.
  */
-export default function TodaysTaskCard({ groupId }) {
+export default function TodaysTaskCard({ groupId, bare = false, autoRefresh = true }) {
   const { todaysTask, fetchTodaysTask, fetchMyStats, fetchCalendar, submitTask, reviewSubmission, loading } = useTaskStore();
   const [contentText, setContentText] = useState('');
   const [linkUrl, setLinkUrl] = useState('');
@@ -168,6 +170,7 @@ export default function TodaysTaskCard({ groupId }) {
   // itself: every 8s while the tab is visible, and immediately on return to
   // the tab. Silent, so the form and review modal never flicker to disabled.
   useEffect(() => {
+    if (!autoRefresh) return undefined;
     const refresh = () => {
       if (document.visibilityState === 'visible') {
         fetchTodaysTask(groupId, { silent: true }).catch(() => {});
@@ -181,7 +184,7 @@ export default function TodaysTaskCard({ groupId }) {
       document.removeEventListener('visibilitychange', refresh);
       window.removeEventListener('focus', refresh);
     };
-  }, [groupId]);
+  }, [groupId, autoRefresh]);
 
   if (!loaded && loading) {
     return (
@@ -247,7 +250,7 @@ export default function TodaysTaskCard({ groupId }) {
   };
 
   return (
-    <section className="space-y-5 rounded-lg border border-line bg-surface p-6">
+    <section className={bare ? 'space-y-5' : 'space-y-5 rounded-lg border border-line bg-surface p-6'}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-mono text-[10px] uppercase tracking-widest text-accent-700">

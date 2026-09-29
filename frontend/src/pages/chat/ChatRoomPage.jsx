@@ -1,18 +1,33 @@
-import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'motion/react';
-import { ArrowLeft, ChevronDown, ClipboardList, Send, Check, CheckCheck } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { MessagesSquare, MoreHorizontal, Search, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Spinner from '../../components/ui/Spinner';
-import Button from '../../components/ui/Button';
-import Avatar from '../../components/ui/Avatar';
+import Dropdown from '../../components/ui/Dropdown';
+import Modal from '../../components/ui/Modal';
 import { useChatStore } from '../../store/useChatStore';
+import { usePinStore } from '../../store/usePinStore';
+import { useTaskStore } from '../../store/useTaskStore';
 import { webSocketService } from '../../services/websocket';
 import { getSmartReplies } from '../../lib/smartReplies';
-import { snappy, useReducedMotion, transition } from '../../lib/motion';
+import { useReducedMotion } from '../../lib/motion';
 import { cn } from '../../lib/utils';
 import TodaysTaskCard from './TodaysTaskCard';
 import ThreadAvatar from './ThreadAvatar';
+import ChatSidebar from './ChatSidebar';
+import ChatDrawer from './ChatDrawer';
+import MessageList from './MessageList';
+import Composer from './Composer';
+import Workspace from './Workspace';
+import { relativeAgo } from './chatFormat';
+
+const STARTERS = [
+  'Hey! Want to work on this together?',
+  'What are you currently building?',
+  'When are you free to discuss this?',
+];
+
+const iconBtn = 'grid h-9 w-9 shrink-0 place-items-center rounded-md text-mute transition-colors hover:bg-surface-2 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500';
 
 export default function ChatRoomPage() {
   const { roomId } = useParams();
@@ -23,21 +38,32 @@ export default function ChatRoomPage() {
     currentRoom, rooms, messages, systemEvents,
     fetchRoom, fetchMessages, sendMessage, markRead, loading,
   } = useChatStore();
+  const { pins, togglePin } = usePinStore();
+  const todaysTask = useTaskStore((st) => st.todaysTask);
 
-  const [content, setContent] = useState('');
   const [sending, setSending] = useState(false);
-  // Collapsed by default on a phone — chat is the primary content there, and
-  // the task panel would otherwise eat the vertical space the thread needs.
-  // From lg up there's room for both side by side, always open, no toggle.
-  const [taskPanelOpen, setTaskPanelOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
+  // Below desktop the workspace can't sit beside the thread, so it's a second
+  // pane behind a Chat | Workspace switch — one tap, always in view.
+  const [pane, setPane] = useState('chat');
+  const [taskOpen, setTaskOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [term, setTerm] = useState('');
+  const composerRef = useRef(null);
   const messagesEndRef = useRef(null);
   const initialRenderRef = useRef(true);
 
   const room = (rooms && rooms[roomId]) || currentRoom;
-  const roomMessages = messages[roomId] || [];
+  const roomMessages = useMemo(() => messages[roomId] || [], [messages, roomId]);
   const joins = systemEvents?.[roomId] || [];
 
   useEffect(() => {
+    setSearchOpen(false);
+    setTerm('');
+    setListOpen(false);
+    setPane('chat');
+    initialRenderRef.current = true;
+
     const init = async () => {
       try {
         await fetchRoom(roomId);
@@ -47,7 +73,7 @@ export default function ChatRoomPage() {
         webSocketService.connect();
         webSocketService.subscribe(roomId);
       } catch {
-        toast.error('Could not open that room');
+        toast.error('Could not open that conversation');
         navigate('/chat');
       }
     };
@@ -65,15 +91,17 @@ export default function ChatRoomPage() {
   }, [roomMessages.length]);
 
   useEffect(() => {
+    if (term) return;
     // Jump on first paint, glide afterwards.
     messagesEndRef.current?.scrollIntoView({
       behavior: initialRenderRef.current || reduced ? 'auto' : 'smooth',
+      block: 'end',
     });
-    initialRenderRef.current = false;
-  }, [roomMessages.length, joins.length]);
+    if (roomMessages.length > 0) initialRenderRef.current = false;
+  }, [roomMessages.length, joins.length, term]);
 
-  // One send path for typed messages and tapped suggestions alike, so both get
-  // the same guard, the same error toast and the same rate-limit behaviour.
+  // One send path for typed messages, tapped replies and attachments alike, so
+  // all of them get the same guard, error toast and rate-limit behaviour.
   const sendText = async (text) => {
     const trimmed = text.trim();
     if (!trimmed || sending) return false;
@@ -90,273 +118,201 @@ export default function ChatRoomPage() {
     }
   };
 
-  const handleSend = async () => {
-    // Clear only on success, so a failed send never eats what was typed.
-    if (await sendText(content)) setContent('');
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
-
-  // Ticks belong to your own messages only.
-  const renderReceipt = (message) => {
-    if (!message.mine) return null;
-    const base = 'ml-1 h-3 w-3 shrink-0';
-    switch (message.receiptStatus) {
-      case 'READ':
-        return <CheckCheck className={cn(base, 'text-accent-600')} aria-label="Read" />;
-      case 'DELIVERED':
-        return <CheckCheck className={cn(base, 'text-mute')} aria-label="Delivered" />;
-      case 'SENT':
-      default:
-        return <Check className={cn(base, 'text-mute/60')} aria-label="Sent" />;
-    }
-  };
-
   if (loading && !room) {
     return (
-      <div className="flex h-[60vh] items-center justify-center text-accent-500">
+      <div className="flex flex-1 items-center justify-center rounded-lg border border-line bg-surface text-accent-500">
         <Spinner size="lg" />
       </div>
     );
   }
 
   if (!room) {
-    return <p className="py-24 text-center text-sm text-mute">That room is not here.</p>;
+    return (
+      <div className="flex flex-1 items-center justify-center rounded-lg border border-line bg-surface">
+        <p className="text-sm text-mute">That conversation isn&rsquo;t here.</p>
+      </div>
+    );
   }
 
   const roomTitle = room.title || room.interestName || 'Chat';
   const memberCount = room.members?.length || 0;
-  // Sender-name labels distinguish speakers whenever more than one other
-  // person could be in the thread — that's any non-1-on-1 room type, not
-  // just one that currently happens to have more than 2 members. A
-  // SHORT_GROUP/SOCIETY room sitting at its 2-member floor (before it grows
-  // toward capacity) is still a group room, and its messages need names.
-  const isGroup = room.type !== 'ONE_ON_ONE';
+  const other = room.type === 'ONE_ON_ONE' ? room.members?.find((m) => !m.self) : null;
+  const pinned = pins.has(roomId);
 
-  // Messages are chronological — pages prepend history, sends and socket
-  // messages append — so the last element is the one to reply to.
-  const suggestions = getSmartReplies({
-    lastMessage: roomMessages[roomMessages.length - 1] || null,
-    room,
-  });
-  // Out of the way once you start typing, and hidden mid-send: sends are not
-  // optimistic, so until the server answers, their message is still "last".
-  const showSuggestions = suggestions.length > 0 && !content.trim() && !sending;
+  // "Last message" rather than a fake online dot: it's the one presence signal
+  // the app actually has.
+  const lastFromThem = [...roomMessages].reverse().find((m) => !m.mine);
+
+  const q = term.trim().toLowerCase();
+  const shown = q ? roomMessages.filter((m) => (m.content || '').toLowerCase().includes(q)) : roomMessages;
+
+  const suggestions = roomMessages.length > 0
+    ? getSmartReplies({ lastMessage: roomMessages[roomMessages.length - 1] || null, room })
+    : [];
+
+  const moreItems = [
+    { label: pinned ? 'Unpin conversation' : 'Pin conversation', onClick: () => togglePin(roomId) },
+    other && { label: 'View profile', onClick: () => navigate(`/profile/${other.userId}`) },
+    room.matchGroupId && { label: 'Group details', onClick: () => navigate(`/matches/${room.matchGroupId}`) },
+  ].filter(Boolean);
+
+  const workspace = (
+    <Workspace
+      room={room}
+      onOpenTask={() => setTaskOpen(true)}
+      onShareFile={() => { setPane('chat'); requestAnimationFrame(() => composerRef.current?.attach()); }}
+    />
+  );
+
+  // A dot on the Workspace switch when today's task still wants something from you.
+  const task = todaysTask?.assignment ? todaysTask : null;
+  const mySub = task?.submissions?.find((x) => x.mine);
+  const pendingReview = task?.submissions?.some((x) => !x.mine && !x.reviewedByMe);
+  const taskNudge = task && (!mySub || pendingReview)
+    ? (!mySub ? 'Task to do' : 'Review waiting')
+    : null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-3 lg:flex-row lg:gap-4">
-      {/* Today's Task — collapsed by default on a phone, sitting above the
-          thread; from lg up it's an always-open side panel instead (below,
-          after the chat box), so this block renders nothing there. */}
-      {room.matchGroupId && (
-        <div className="shrink-0 lg:hidden">
-          <button
-            type="button"
-            onClick={() => setTaskPanelOpen((o) => !o)}
-            aria-expanded={taskPanelOpen}
-            className="flex w-full items-center justify-between rounded-lg border border-line bg-surface px-4 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
-          >
-            <span className="flex items-center gap-2 text-sm font-medium text-ink">
-              <ClipboardList className="h-4 w-4 text-accent-600" aria-hidden="true" />
-              Today's Task
-            </span>
-            <ChevronDown
-              className={cn('h-4 w-4 text-mute transition-transform', taskPanelOpen && 'rotate-180')}
-              aria-hidden="true"
-            />
+    <div className="flex min-h-0 flex-1 gap-3 md:gap-5">
+      {/* ------------------------------------------------ the conversation */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-lg border border-line bg-surface">
+        <header className="flex shrink-0 items-center gap-2 border-b border-line px-2.5 py-2 sm:gap-3 sm:px-4 sm:py-2.5">
+          <button onClick={() => setListOpen(true)} aria-label="Open messages" className={cn(iconBtn, 'lg:hidden')}>
+            <MessagesSquare className="h-[18px] w-[18px]" aria-hidden="true" />
           </button>
-          {taskPanelOpen && (
-            <div className="mt-3">
-              <TodaysTaskCard groupId={room.matchGroupId} />
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-line bg-surface">
-      {/* Header */}
-      <div className="flex shrink-0 items-center gap-3 border-b border-line px-4 py-3">
-        {/* Desktop always shows the thread rail beside this room, so the way
-            back is already on screen — this is a mobile-only affordance. */}
-        <button
-          onClick={() => navigate('/chat')}
-          aria-label="Back to threads"
-          className="-ml-1 rounded p-1.5 text-mute transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 lg:hidden"
-        >
-          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-        </button>
-        <ThreadAvatar type={room.type} members={room.members} size="sm" />
-        <div className="min-w-0">
-          <h1 className="truncate font-display text-base font-semibold leading-tight tracking-tight text-ink">
-            {roomTitle}
-          </h1>
-          <p className="font-mono text-[10px] uppercase tracking-widest text-mute">
-            {memberCount} {memberCount === 1 ? 'person' : 'people'}
-            {room.interestName ? ` · ${room.interestName}` : ''}
-          </p>
-        </div>
-      </div>
-
-      {/* Messages */}
-      <div
-        role="log"
-        aria-label="Messages"
-        aria-live="polite"
-        className="flex-1 overflow-y-auto px-4 py-5"
-      >
-        {roomMessages.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center px-8 text-center">
-            <ThreadAvatar type={room.type} members={room.members} size="lg" className="mb-4" />
-            <p className="font-display text-lg font-semibold tracking-tight text-ink">
-              {room.emptyStateMessage || 'Nobody has said anything yet.'}
-            </p>
-            <p className="mt-2 text-sm text-mute">
-              Someone has to go first. It might as well be you.
+          <ThreadAvatar type={room.type} members={room.members} size="md" />
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate font-display text-base font-bold leading-tight tracking-tight text-ink">{roomTitle}</h1>
+            <p className="truncate text-xs text-mute">
+              {room.interestName}
+              <span className="hidden sm:inline">
+                {' '}&middot; {memberCount} {memberCount === 1 ? 'person' : 'people'}
+                {lastFromThem?.sentAt && <> &middot; last message {relativeAgo(lastFromThem.sentAt)}</>}
+              </span>
             </p>
           </div>
-        ) : (
-          // A reading-width column, not the full (now much wider) panel — a
-          // message bubble stretched to a 1000px+ pane looks like a bug, not
-          // spaciousness.
-          <div className="mx-auto w-full max-w-4xl space-y-3">
-          {roomMessages.map((message, index) => {
-            const isMine = message.mine;
-            const prev = roomMessages[index - 1];
-            const startsRun = prev?.senderId !== message.senderId;
-            const showName = isGroup && !isMine && startsRun;
-            // Only the first bubble in a run of consecutive messages from the
-            // same sender carries their face; a reserved same-size spacer
-            // keeps every bubble in the run left-aligned either way.
-            const showAvatar = !isMine && startsRun;
-            const key = message.id || message.clientMessageId || `${message.sentAt}-${index}`;
+          <div className="flex shrink-0 items-center gap-0.5">
+            <button
+              onClick={() => { setSearchOpen((o) => !o); setTerm(''); }}
+              aria-label="Search this conversation"
+              aria-pressed={searchOpen}
+              className={cn(iconBtn, searchOpen && 'bg-surface-2 text-ink')}
+            >
+              <Search className="h-[18px] w-[18px]" aria-hidden="true" />
+            </button>
+            <Dropdown
+              align="right"
+              label="More options"
+              trigger={<span className={iconBtn}><MoreHorizontal className="h-[18px] w-[18px]" aria-hidden="true" /></span>}
+              items={moreItems}
+            />
+          </div>
+        </header>
 
-            return (
-              <motion.div
-                key={key}
-                // New bubbles rise from the bottom; history does not animate.
-                initial={reduced ? false : { opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={transition(snappy, reduced)}
-                className={cn('flex items-start gap-2', isMine ? 'justify-end' : 'justify-start')}
-              >
-                {!isMine && (
-                  showAvatar
-                    ? <Avatar src={message.senderPhotoUrl} name={message.senderName} size="sm" />
-                    : <div className="w-8 shrink-0" aria-hidden="true" />
-                )}
-                <div className={cn('max-w-[78%]', isMine ? 'items-end' : 'items-start')}>
-                  {showName && (
-                    <p className="mb-1 ml-0.5 font-mono text-[10px] uppercase tracking-widest text-mute">
-                      {message.senderName}
-                    </p>
-                  )}
-                  <div
-                    className={cn(
-                      'rounded-lg px-3.5 py-2.5',
-                      isMine
-                        ? 'grad-brand-cta text-white shadow-sm'
-                        : 'border border-line bg-surface-2 text-ink'
-                    )}
-                  >
-                    <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">
-                      {message.content}
-                    </p>
-                  </div>
-                  <div className={cn('mt-1 flex items-center', isMine ? 'justify-end' : 'justify-start')}>
-                    <span className="text-[10px] text-mute tnum">
-                      {message.sentAt
-                        ? new Date(message.sentAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        : ''}
-                    </span>
-                    {renderReceipt(message)}
-                  </div>
-                </div>
-              </motion.div>
-            );
-          })}
-
-          {/* MEMBER_JOINED, as a quiet system line — never a bubble. */}
-          {joins.map((join) => (
-            <p key={join.id} className="py-1 text-center font-mono text-[10px] uppercase tracking-widest text-mute">
-              {join.name} joined
-            </p>
+        <div role="tablist" aria-label="Conversation view" className="flex shrink-0 gap-1 border-b border-line px-3 py-1.5 xl:hidden">
+          {[
+            { key: 'chat', label: 'Chat' },
+            { key: 'workspace', label: 'Workspace', note: taskNudge },
+          ].map((t) => (
+            <button
+              key={t.key}
+              role="tab"
+              aria-selected={pane === t.key}
+              onClick={() => setPane(t.key)}
+              className={cn(
+                'relative inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500',
+                pane === t.key ? 'bg-accent-50 text-accent-700' : 'text-mute hover:text-ink'
+              )}
+            >
+              {t.label}
+              {t.note && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-medium text-wait">
+                  <span className="h-1.5 w-1.5 rounded-full bg-wait" aria-hidden="true" />
+                  <span className="hidden min-[380px]:inline">{t.note}</span>
+                  <span className="sr-only min-[380px]:hidden">{t.note}</span>
+                </span>
+              )}
+            </button>
           ))}
+        </div>
+
+        {pane === 'workspace' && (
+          <div className="min-h-0 flex-1 overflow-y-auto xl:hidden">{workspace}</div>
+        )}
+
+        <div className={cn('min-h-0 flex-1 flex-col', pane === 'workspace' ? 'hidden xl:flex' : 'flex')}>
+        {searchOpen && (
+          <div className="flex shrink-0 items-center gap-2 border-b border-line bg-surface-2/40 px-3 py-2 sm:px-4">
+            <Search className="h-4 w-4 shrink-0 text-mute" aria-hidden="true" />
+            <label htmlFor="thread-search" className="sr-only">Search messages</label>
+            <input
+              id="thread-search"
+              autoFocus
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Escape') { setSearchOpen(false); setTerm(''); } }}
+              placeholder="Search messages"
+              className="min-w-0 flex-1 bg-transparent text-sm text-ink placeholder:text-mute/70 focus:outline-none"
+            />
+            {q && <span className="shrink-0 text-xs text-mute tnum">{shown.length} {shown.length === 1 ? 'match' : 'matches'}</span>}
+            <button onClick={() => { setSearchOpen(false); setTerm(''); }} aria-label="Close search" className="grid h-7 w-7 place-items-center rounded-md text-mute hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
           </div>
         )}
 
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Composer */}
-      <div className="shrink-0 border-t border-line px-4 py-3">
-        <div className="mx-auto w-full max-w-4xl">
-        {/* Smart replies. One tap sends, as on LinkedIn. On a phone the row
-            scrolls sideways rather than wrapping, so it never pushes the
-            composer up; from `sm` there is room to wrap and centre. */}
-        <AnimatePresence initial={false}>
-          {showSuggestions && (
-            <motion.div
-              key="smart-replies"
-              role="group"
-              aria-label="Suggested replies"
-              initial={reduced ? { opacity: 0 } : { opacity: 0, y: 6 }}
-              animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
-              exit={reduced ? { opacity: 0 } : { opacity: 0, y: 6 }}
-              transition={transition(snappy, reduced)}
-              className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-0.5 [scrollbar-width:none] sm:flex-wrap sm:justify-center sm:overflow-visible"
-            >
-              {suggestions.map((reply) => (
-                <button
-                  key={reply}
-                  type="button"
-                  onClick={() => sendText(reply)}
-                  disabled={sending}
-                  className="shrink-0 whitespace-nowrap rounded-full border border-accent-500 bg-surface px-4 py-1.5 text-sm font-semibold text-accent-700 transition-colors hover:bg-accent-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500 focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:opacity-50"
-                >
-                  {reply}
-                </button>
-              ))}
-            </motion.div>
+        <div role="log" aria-label="Messages" aria-live="polite" className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 sm:px-6 sm:pb-4">
+          {roomMessages.length === 0 ? (
+            <div className="mx-auto flex h-full max-w-sm flex-col items-center justify-center py-10 text-center">
+              <ThreadAvatar type={room.type} members={room.members} size="lg" />
+              <h2 className="mt-4 font-display text-lg font-bold tracking-tight text-ink">Start the conversation</h2>
+              <p className="mt-1.5 text-sm leading-relaxed text-mute">
+                Say hello and discuss what you&rsquo;d like to work on together.
+              </p>
+              <ul className="mt-5 flex w-full flex-col gap-2">
+                {STARTERS.map((s) => (
+                  <li key={s}>
+                    <button
+                      onClick={() => composerRef.current?.insert(s)}
+                      className="w-full rounded-lg border border-line px-3.5 py-2.5 text-left text-sm text-ink transition-colors hover:border-accent-400 hover:bg-accent-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+                    >
+                      {s}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : q && shown.length === 0 ? (
+            <p className="py-16 text-center text-sm text-mute">No messages match &ldquo;{term.trim()}&rdquo;.</p>
+          ) : (
+            <MessageList messages={shown} joins={q ? [] : joins} term={q} />
           )}
-        </AnimatePresence>
-
-        <div className="flex items-end gap-2">
-          <label htmlFor="chat-input" className="sr-only">Message</label>
-          <textarea
-            id="chat-input"
-            rows={1}
-            placeholder="Say something"
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={handleKeyDown}
-            className="max-h-32 flex-1 resize-none rounded border border-line bg-surface-2 px-3 py-2.5 text-sm text-ink placeholder:text-mute/55 focus:border-accent-500 focus:outline-none focus:ring-2 focus:ring-accent-500/25"
-          />
-          <Button
-            onClick={handleSend}
-            disabled={!content.trim() || sending}
-            loading={sending}
-            variant="gradient"
-            aria-label="Send message"
-            className="mb-0.5 h-10 w-10 shrink-0 p-0"
-          >
-            {!sending && <Send className="h-4 w-4" aria-hidden="true" />}
-          </Button>
+          <div ref={messagesEndRef} />
         </div>
-        <p className="mt-1.5 text-[10px] text-mute/70">Enter sends · Shift+Enter for a new line</p>
+
+        <Composer ref={composerRef} onSend={sendText} sending={sending} suggestions={suggestions} />
         </div>
       </div>
-      </div>
 
-      {/* Desktop: always-open side panel, same content as the mobile toggle above. */}
+      {/* ------------------------------------------ workspace (desktop) */}
+      <aside
+        aria-label="Workspace"
+        className="hidden min-h-0 w-[30%] min-w-[280px] max-w-[400px] shrink-0 flex-col overflow-hidden rounded-lg border border-line bg-surface xl:flex"
+      >
+        <h2 className="shrink-0 border-b border-line px-4 pb-3 pt-4 font-display text-xl font-bold tracking-tight text-ink">Workspace</h2>
+        <div className="min-h-0 flex-1 overflow-y-auto">{workspace}</div>
+      </aside>
+
+      {/* ------------------------------------ drawers below desktop width */}
+      <ChatDrawer open={listOpen} onClose={() => setListOpen(false)} side="left" title="Messages">
+        <ChatSidebar inDrawer onNavigate={() => setListOpen(false)} />
+      </ChatDrawer>
+
       {room.matchGroupId && (
-        <div className="hidden w-[360px] shrink-0 overflow-y-auto lg:block">
-          <TodaysTaskCard groupId={room.matchGroupId} />
-        </div>
+        <Modal open={taskOpen} onClose={() => setTaskOpen(false)} title="Today's task" size="lg">
+          <TodaysTaskCard groupId={room.matchGroupId} bare autoRefresh={false} />
+        </Modal>
       )}
     </div>
   );

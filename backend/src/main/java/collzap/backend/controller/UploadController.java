@@ -33,7 +33,8 @@ public class UploadController {
     private static final Map<String, String> CATEGORY_FOLDERS = Map.of(
         "DOCUMENT", "collzap/documents",
         "PROFILE_PHOTO", "collzap/profile-photos",
-        "TASK_SUBMISSION", "collzap/task-submissions"
+        "TASK_SUBMISSION", "collzap/task-submissions",
+        "CHAT_ATTACHMENT", "collzap/chat-attachments"
     );
 
     private final DocumentUploadService documentUploadService;
@@ -52,9 +53,10 @@ public class UploadController {
         String upperCategory = category.toUpperCase();
         String folder = CATEGORY_FOLDERS.get(upperCategory);
         if (folder == null) {
-            throw new BadRequestException("Invalid category. Must be DOCUMENT, PROFILE_PHOTO or TASK_SUBMISSION");
+            throw new BadRequestException("Invalid category. Must be DOCUMENT, PROFILE_PHOTO, TASK_SUBMISSION or CHAT_ATTACHMENT");
         }
-        var policy = upperCategory.equals("TASK_SUBMISSION")
+        // Chat attachments share the task policy: images or a PDF, up to 10 MB.
+        var policy = upperCategory.equals("TASK_SUBMISSION") || upperCategory.equals("CHAT_ATTACHMENT")
             ? DocumentUploadService.TASK_SUBMISSION_10MB
             : DocumentUploadService.IMAGE_5MB;
         String url = documentUploadService.validateAndUpload(file, folder, policy);
