@@ -11,7 +11,7 @@ import Footer from './landing/sections/Footer';
  *
  * Section 4.2's "manual verification within 24 hours" is left as written —
  * that's an operational commitment, not something the code enforces or
- * contradicts, so it isn't this file's call to soften.
+ * contradicts, so it isn't this file's call to soften
  */
 export default function TermsPage() {
   return (
