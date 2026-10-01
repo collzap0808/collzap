@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
@@ -10,8 +10,10 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { page, useReducedMotion, transition } from '../../lib/motion';
 
 export default function SignupPage() {
+  const location = useLocation();
   const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+  // Carried over from the email box on the landing hero, if they used it.
+  const [email, setEmail] = useState(() => location.state?.email || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({});

@@ -322,6 +322,72 @@
     );
     animation: sheen-sweep 1.8s infinite;
   }
+
+  /*
+   * Hero campus network. Every keyframe ends where it rests, so under the
+   * global reduced-motion clamp below the frozen frame is the finished one:
+   * lines drawn, labels still, dots at rest.
+   */
+  @keyframes cn-draw {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes cn-fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes cn-float {
+    0%, 100% { transform: translate(-50%, -50%); }
+    50% { transform: translate(-50%, calc(-50% - 4px)); }
+  }
+  @keyframes cn-pulse {
+    0%, 100% { transform: scale(1); opacity: 0.55; }
+    50% { transform: scale(1.9); opacity: 0; }
+  }
+  .cn-draw {
+    stroke-dasharray: 1;
+    stroke-dashoffset: 1;
+    animation: cn-draw 2.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  }
+  .cn-fade {
+    opacity: 0;
+    animation: cn-fade 1.6s ease-out forwards;
+  }
+  .cn-float {
+    transform: translate(-50%, -50%);
+    animation: cn-float 7s ease-in-out infinite;
+  }
+  /*
+   * Hero palette — "Ice & Amber". Fixed on purpose: the hero looks the same in
+   * light and dark mode, a pale ice-blue world that sits inside the brand's
+   * blue/white rather than fighting it, with one warm amber note for contrast.
+   */
+  .hero-sky {
+    --h-bg: 222 236 251;
+    --h-surface: 255 255 255;
+    --h-ink: 10 31 68;
+    --h-mute: 74 92 120;
+    --h-line: 190 212 239;
+    --h-accent: 31 111 209;
+    --h-accent-strong: 11 91 184;
+    --h-on-accent: 255 255 255;
+    --h-hi: 255 181 71;
+    --h-leaf: 86 166 124;
+    color-scheme: light;
+  }
+
+  @keyframes iso-float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+  }
+  .iso-float {
+    animation: iso-float 8s ease-in-out infinite;
+  }
+  .cn-pulse {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: cn-pulse 3.6s ease-out infinite;
+  }
 }
 
 /* Reduced motion is respected globally, not just per-component. */

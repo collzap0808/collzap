@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { ArrowRight } from 'lucide-react';
-import Button from '../../../components/ui/Button';
+import TicketButton from '../../../components/ui/TicketButton';
 import { snappy, transition, useReducedMotion } from '../../../lib/motion';
 import { usePrimaryCta } from '../shared';
 
@@ -37,15 +36,7 @@ export default function StickyCta() {
             <Link to="/login" className="shrink-0 rounded px-2 py-2 text-sm font-medium text-mute transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500">
               Log in
             </Link>
-            <Link to={cta.to} className="flex-1">
-              <Button
-                variant="gradient"
-                className="w-full"
-                icon={<ArrowRight className="h-4 w-4" />}
-              >
-                {cta.label}
-              </Button>
-            </Link>
+            <TicketButton to={cta.to} size="lg" className="flex-1">{cta.label}</TicketButton>
           </div>
         </motion.div>
       )}

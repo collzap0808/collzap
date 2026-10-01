@@ -3,13 +3,13 @@ import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { ChevronDown, ChevronRight, Menu, X } from 'lucide-react';
 import Logo from '../../../components/brand/Logo';
-import Button from '../../../components/ui/Button';
+import TicketButton from '../../../components/ui/TicketButton';
 import ThemeToggle from '../../../components/ui/ThemeToggle';
 import { cn } from '../../../lib/utils';
 import { snappy, transition, useReducedMotion } from '../../../lib/motion';
 import { HOME_SECTIONS, NAV_PAGES, usePrimaryCta } from '../shared';
 
-export default function Nav() {
+export default function Nav({ overHero = false }) {
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [homeOpen, setHomeOpen] = useState(false);
@@ -48,19 +48,21 @@ export default function Nav() {
     };
   }, [homeOpen]);
 
-  // At the top the bar floats over the always-dark hero, so it has to carry
-  // light colours regardless of theme; once scrolled it rejoins the tokens.
-  // An open menu counts as "scrolled" — the sheet is a token surface, and a
-  // half-light half-dark header reads as a bug.
+  // The hero follows the theme, so the bar always uses the tokens; scrolling
+  // (or an open menu) only adds its backdrop.
   const solid = scrolled || menuOpen;
-  const link = solid ? 'text-mute hover:text-ink' : 'text-[#A8BDD8] hover:text-white';
+  // Floating over the landing hero, the bar takes the hero's fixed light
+  // colours (the hero ignores the app theme); everywhere else, and once
+  // scrolled, it follows the theme tokens.
+  const onHero = overHero && !solid;
+  const link = onHero ? 'text-[#4A5C78] hover:text-[#0A1F44]' : 'text-mute hover:text-ink';
 
   // On a phone the header is just a logo and two bare glyphs, which reads as
   // unfinished. Giving them a real surface makes them look like the buttons
   // they are — and 40px is a proper touch target.
-  const iconBtn = solid
-    ? 'border border-line bg-surface text-mute hover:text-ink'
-    : 'border border-white/15 bg-white/[0.07] text-[#A8BDD8] hover:bg-white/[0.12] hover:text-white';
+  const iconBtn = onHero
+    ? 'border border-[#D4E1F2] bg-white/80 text-[#4A5C78] hover:text-[#0A1F44]'
+    : 'border border-line bg-surface text-mute hover:text-ink';
 
   return (
     <header
@@ -72,7 +74,7 @@ export default function Nav() {
       )}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6 sm:px-8">
-        <Logo className={cn('h-7 transition-colors duration-300 sm:h-8', !solid && 'text-[#E8F0FE]')} animated />
+        <Logo className={cn('h-7 transition-colors duration-300 sm:h-8', onHero && 'text-[#0A1F44] dark:text-[#0A1F44]')} animated />
 
         <nav className="flex items-center gap-1 sm:gap-2">
           {/* Home: a direct link back to "/" from anywhere on the site, plus a
@@ -145,7 +147,7 @@ export default function Nav() {
             className={cn(
               'ml-1 h-10 w-10 rounded-lg lg:ml-2 lg:h-9 lg:w-9',
               iconBtn,
-              solid && 'hover:bg-accent-50 hover:text-accent-700'
+              'hover:bg-accent-50 hover:text-accent-700'
             )}
           />
 
@@ -157,7 +159,7 @@ export default function Nav() {
             className={cn(
               'ml-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg lg:ml-2 lg:h-9 lg:w-9',
               iconBtn,
-              solid && 'hover:bg-accent-50 hover:text-accent-700'
+              'hover:bg-accent-50 hover:text-accent-700'
             )}
           >
             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
@@ -175,9 +177,7 @@ export default function Nav() {
             Log in
           </Link>
 
-          <Link to={cta.to} className="hidden md:block">
-            <Button size="sm" variant="gradient">{cta.label}</Button>
-          </Link>
+          <TicketButton to={cta.to} tone={onHero ? 'brandLight' : 'brand'} className="ml-1 hidden md:inline-flex">{cta.label}</TicketButton>
 
           <button
             type="button"
@@ -266,9 +266,7 @@ export default function Nav() {
                 >
                   Log in
                 </Link>
-                <Link to={cta.to} onClick={() => setMenuOpen(false)} className="flex-1">
-                  <Button size="md" variant="gradient" className="w-full">{cta.label}</Button>
-                </Link>
+                <TicketButton to={cta.to} onClick={() => setMenuOpen(false)} className="flex-1">{cta.label}</TicketButton>
               </li>
             </ul>
           </motion.div>

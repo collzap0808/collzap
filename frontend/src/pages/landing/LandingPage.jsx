@@ -107,7 +107,7 @@ export default function LandingPage() {
         <script type="application/ld+json">{JSON.stringify(SITE_SCHEMA)}</script>
       </Helmet>
 
-      <Nav />
+      <Nav overHero />
       <main>
         <Hero />
         <Problem />

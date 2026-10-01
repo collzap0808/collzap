@@ -32,7 +32,7 @@ function htmlEscape(s) {
 const ROUTES = [
   // Assertions avoid text that spans an inline element — the hero <h1> has a
   // <span> in the middle of it, so it is not contiguous in the output.
-  { path: '/', must: 'discover like-minded peers for friendships, projects', sitemap: true },
+  { path: '/', must: 'discover like-minded people from their own campus', sitemap: true },
   { path: '/about', must: 'What CollZap is', sitemap: true },
   { path: '/faq', must: 'Frequently asked questions', sitemap: true },
   { path: '/bring-collzap', must: 'Bring CollZap to your college', sitemap: true },

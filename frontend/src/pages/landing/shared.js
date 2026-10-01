@@ -16,7 +16,7 @@ export function usePrimaryCta() {
 
   const canAccessApp = !nextStep || nextStep === 'READY' || nextStep === 'AWAITING_VERIFICATION';
   return canAccessApp
-    ? { to: '/home', label: 'Go to your desk' }
+    ? { to: '/home', label: 'Open CollZap' }
     : { to: '/onboarding', label: 'Finish setting up' };
 }
 
