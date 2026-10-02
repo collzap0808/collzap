@@ -101,7 +101,7 @@ export default function Hero() {
           {/* The illustration gets the room: wider than its column, bleeding toward the edge on large screens. */}
           <motion.div
             {...reveal(reduced, 0.12)}
-            className="-mx-4 w-[calc(100%+2rem)] max-w-[720px] sm:mx-auto sm:w-full lg:-mr-8 lg:ml-0 lg:w-[110%] lg:max-w-none xl:-mr-12 xl:w-[113%] min-[1400px]:-mr-32 min-[1400px]:w-[126%] 2xl:-mr-40"
+            className="-mx-4 w-[calc(100%+2rem)] max-w-[720px] sm:mx-auto sm:w-full lg:-mr-8 lg:ml-0 lg:w-[110%] lg:max-w-none xl:-mr-10 xl:w-[112%] min-[1400px]:-mr-14 min-[1400px]:w-[116%] min-[1600px]:-mr-28 min-[1600px]:w-[132%] min-[1800px]:-mr-44 min-[1800px]:w-[148%]"
           >
             <CampusHubSketch className="h-auto w-full" />
           </motion.div>

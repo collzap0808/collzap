@@ -68,6 +68,7 @@ const AdminQuestionsPage = lazy(() => import('./pages/admin/AdminQuestionsPage')
 const AdminTaskBanksPage = lazy(() => import('./pages/admin/AdminTaskBanksPage'));
 const AdminSessionsPage = lazy(() => import('./pages/admin/AdminSessionsPage'));
 const AdminSoloReviewsPage = lazy(() => import('./pages/admin/AdminSoloReviewsPage'));
+const AdminAnalyticsPage = lazy(() => import('./pages/admin/AdminAnalyticsPage'));
 
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
@@ -216,6 +217,7 @@ function App() {
                 <Route path="/admin/task-banks" element={<AdminTaskBanksPage />} />
                 <Route path="/admin/sessions" element={<AdminSessionsPage />} />
                 <Route path="/admin/task-reviews" element={<AdminSoloReviewsPage />} />
+                <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
               </Route>
             </Route>
           </Route>

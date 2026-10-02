@@ -128,6 +128,13 @@
 			<artifactId>cloudinary-http45</artifactId>
 			<version>1.39.0</version>
 		</dependency>
+
+		<!-- Reads landing-page visitor counts from Google Analytics 4 for the admin panel. -->
+		<dependency>
+			<groupId>com.google.analytics</groupId>
+			<artifactId>google-analytics-data</artifactId>
+			<version>0.104.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>

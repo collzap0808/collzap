@@ -1,4 +1,6 @@
+import { useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { trackLandingView } from '../../lib/analytics';
 import { useLenis } from '../../lib/useLenis';
 import Nav from './sections/Nav';
 import Hero from './sections/Hero';
@@ -79,6 +81,9 @@ const SITE_SCHEMA = {
  */
 export default function LandingPage() {
   useLenis(true);
+
+  // Daily visitor count for the admin Analytics page.
+  useEffect(() => { trackLandingView(); }, []);
 
   /*
    * `overflow-x-hidden` below is deliberate, not a patch over a broken layout.
