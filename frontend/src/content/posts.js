@@ -1317,6 +1317,138 @@ export const POSTS = [
       },
     ],
   },
+  {
+    slug: 'how-to-stay-consistent-in-college',
+    title: 'How to Stay Consistent in College: Why 30 Minutes a Day Beats Weekend Sprints',
+    description:
+      'Big weekend plans rarely survive a semester. A practical guide to building skills in college with small daily tasks, streaks and people who keep you going.',
+    date: '2026-10-02',
+    readingMinutes: 7,
+    tags: ['Habits', 'How-to'],
+    blocks: [
+      {
+        t: 'p',
+        x: 'Sunday night, the plan is perfect. This weekend you are finally going to learn React, or finish the portfolio, or get through the first half of that machine learning course. Saturday goes brilliantly. Then a lab report lands, the fest committee needs you, mid-sems are closer than they looked, and the next free weekend is three weeks away. By then the plan has quietly disappeared.',
+      },
+      {
+        t: 'p',
+        x: 'If that sounds familiar, the problem is almost never motivation. You clearly had plenty of it on Sunday night. The problem is the shape of the plan. College schedules punish big, rare bursts of effort and reward small, boring, daily ones — and almost nobody sets things up that way on purpose.',
+      },
+
+      { t: 'h2', x: 'Why weekend sprints fail in college' },
+      {
+        t: 'p',
+        x: 'A weekend sprint looks efficient: one long block, no context switching, real focus. In practice it fails in college for a few predictable reasons.',
+      },
+      {
+        t: 'ul',
+        items: [
+          'Your schedule is not yours. Assignments, labs, tests, events and family visits arrive on their own timetable. A plan that needs a clear weekend will lose to whatever claims the weekend first.',
+          'It is all or nothing. Miss one weekend and you have not lost a day, you have lost a whole week of progress — and the gap makes it feel harder to restart.',
+          'There is no feedback. When you work once a week, nobody sees the work until it is far too late to correct the direction.',
+          'You are doing it alone. A plan that only exists in your head has no one to notice when it stops.',
+        ],
+      },
+
+      { t: 'h2', x: 'Why small daily work wins' },
+      {
+        t: 'p',
+        x: 'Thirty focused minutes a day does not sound like much. Over a semester it is more reliable than any weekend plan, because it survives the weeks a weekend plan does not.',
+      },
+      {
+        t: 'ul',
+        items: [
+          'It compounds. Each day starts from where yesterday ended, so the skill builds on itself instead of restarting every Saturday.',
+          'The habit forms around showing up, not around how you feel. After a couple of weeks, the question is no longer whether to work today, only what to work on.',
+          'Starting is easy. Opening a laptop for thirty minutes takes far less willpower than blocking out an entire day.',
+          'Problems show up while they are small. When you touch the work every day, a confusing concept or a broken build is a ten-minute fix, not a lost weekend.',
+        ],
+      },
+
+      { t: 'h2', x: 'How to set it up' },
+      { t: 'h3', x: '1. Pick one direction for the semester' },
+      {
+        t: 'p',
+        x: 'Not five. One. Web development, competitive programming, design, a research topic, a startup idea — whatever you actually care about this semester. Daily work only compounds if it points the same way every day. You can switch at the end of the semester; switching every week just means starting over every week.',
+      },
+      { t: 'h3', x: '2. Make the daily unit tiny' },
+      {
+        t: 'p',
+        x: 'Aim for 30 to 45 minutes, something you can finish in one sitting even on a bad day. "Learn React" is not a daily unit. "Build one component that fetches and shows a list" is. If you regularly fail to finish a day’s unit, it is too big — cut it in half rather than giving up on the habit.',
+      },
+      { t: 'h3', x: '3. Make every day produce something you could show' },
+      {
+        t: 'p',
+        x: 'A commit, a page of notes, a solved problem, a sketch, a short write-up of what you learned. Output beats hours: "studied for two hours" is easy to fake, even to yourself; "here is what I made today" is not. It also gives you a trail of real work to point to later, in interviews or applications.',
+      },
+      { t: 'h3', x: '4. Track it simply, and never miss twice' },
+      {
+        t: 'p',
+        x: 'A calendar where you mark each day you did the work is enough. Streaks are motivating, but the rule that matters is simpler: you will miss days, so never miss two in a row. One missed day is life; two is the start of quitting.',
+      },
+      { t: 'h3', x: '5. Plan for bad days in advance' },
+      {
+        t: 'p',
+        x: 'Decide now what your ten-minute version looks like — reading one page of the docs, fixing one small bug, reviewing yesterday’s notes. During exam week or a packed fest week, do the ten-minute version and count it. The goal on bad days is not progress, it is keeping the habit alive.',
+      },
+
+      { t: 'h2', x: 'The part most people skip: other people' },
+      {
+        t: 'p',
+        x: 'Most consistency advice stops at systems and trackers. In practice, the strongest thing keeping people going is another person who notices. Someone who sees what you made today, tells you honestly whether it is any good, and expects to see the next piece tomorrow.',
+      },
+      {
+        t: 'p',
+        x: 'That person works best when they are close to where you are: on your own campus, dealing with the same exam calendar, at a similar level in the same thing. An internet stranger three years ahead of you will not notice when you go quiet. A peer two hostels away, working on the same kind of project at the same pace, will.',
+      },
+      {
+        t: 'quote',
+        x: 'Motivation gets you to day one. Someone who notices whether you showed up gets you to day sixty.',
+      },
+
+      { t: 'h2', x: 'A simple 4-week starter plan' },
+      {
+        t: 'ol',
+        items: [
+          'Week 1 — Set the routine. Pick your one direction, choose a fixed time of day, and do a 30-minute unit every day. Do not optimise anything yet; just show up.',
+          'Week 2 — Define your minimum version. Write down your ten-minute fallback and use it on any day the full unit will not happen. Keep the never-miss-twice rule.',
+          'Week 3 — Share the work. Find one person working on something similar and send them what you made each day, or a short weekly summary. Look at theirs too.',
+          'Week 4 — Review what stuck. Look back at four weeks of output. Make the daily unit a little bigger only if you finished almost every day; otherwise keep it the same and keep going.',
+        ],
+      },
+
+      { t: 'h2', x: 'Common mistakes' },
+      {
+        t: 'ul',
+        items: [
+          'Making the daily unit too ambitious, failing it twice, and deciding daily work "does not work for you".',
+          'Switching goals every week, so nothing ever compounds.',
+          'Measuring hours instead of outputs, which hides days where time passed but nothing got made.',
+          'Quitting after one broken streak instead of simply restarting the next day.',
+          'Keeping the whole plan private, so nobody notices — including you — when it quietly stops.',
+        ],
+      },
+
+      { t: 'h2', x: 'How CollZap builds this in' },
+      {
+        t: 'p',
+        x: `${collzapIntro} It is also built around the small-daily-work idea from the very first day:`,
+      },
+      {
+        t: 'ul',
+        items: [
+          'One short task a day for each interest you pick, reviewed by the CollZap team, so your work gets real feedback from the start.',
+          'Approved tasks earn points and build a personal streak — your own progress, with no leaderboard.',
+          'At 500 points, peer matching opens: you are matched with verified students on your own campus who share your interest and are at a similar level.',
+          'Once you are matched, your group gets a daily task too, and you review each other’s work, so the person who notices whether you showed up is right there in your group.',
+        ],
+      },
+      {
+        t: 'p',
+        x: 'Consistency in college is not about finding more willpower or a perfect free weekend. It is about a small unit of work, done most days, seen by someone who cares whether you keep going. Pick your one thing, start with thirty minutes today, and if you want the structure and the people built in, find your circle at collzap.com.',
+      },
+    ],
+  },
 ];
 
 /** Newest first, which is the order the index page and sitemap both want. */

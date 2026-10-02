@@ -74,6 +74,10 @@
       "destination": "/blog/why-campus-societies-fade-after-first-year/index.html"
     },
     {
+      "source": "/blog/how-to-stay-consistent-in-college",
+      "destination": "/blog/how-to-stay-consistent-in-college/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/app.html"
     }
