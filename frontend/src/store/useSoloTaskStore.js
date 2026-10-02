@@ -25,8 +25,11 @@ export const useSoloTaskStore = create((set, get) => ({
   // Set when another page asks to open the next task before the list has loaded.
   pendingOpen: false,
 
+  // For other pages (Matches → "Do today's task"): don't open now, while the
+  // route is still changing — the desk opens it once its fresh task list lands,
+  // so the modal appears exactly once instead of flashing open, closed, open.
   requestOpenNextTask: () => {
-    if (!get().openNextTask()) set({ pendingOpen: true });
+    set({ pendingOpen: true, openTaskId: null });
   },
 
   setOpenTaskId: (openTaskId) => set({ openTaskId }),

@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import { Outlet, Link, useLocation, useOutlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { ArrowRight, Hourglass } from 'lucide-react';
 import AppNav from './AppNav';
@@ -9,6 +9,19 @@ import { webSocketService } from '../../services/websocket';
 import { page, snappy, useReducedMotion, transition } from '../../lib/motion';
 
 const UNREAD_POLL_MS = 30_000;
+
+/**
+ * The route's page, captured once when this wrapper mounts. Inside the
+ * AnimatePresence below, the outgoing wrapper keeps showing its *own* page
+ * while it fades out; a plain <Outlet /> would switch to the new page at once,
+ * mounting it twice (inside the leaving wrapper, then again in the new one) —
+ * which reran every page's effects and made modals flash open, shut, open.
+ */
+function FrozenOutlet() {
+  const outlet = useOutlet();
+  const [frozen] = useState(outlet);
+  return frozen;
+}
 
 /**
  * Vertical space the floating capsule and page gutters take, published as
@@ -175,7 +188,7 @@ export default function AppShell() {
               transition={transition(page, reduced)}
               className={`mx-auto ${isWide ? 'max-w-7xl' : isProfile ? 'max-w-6xl' : 'max-w-5xl'} px-5 sm:px-8 ${pad}`}
             >
-              <Outlet />
+              <FrozenOutlet />
             </motion.div>
           </AnimatePresence>
         )}
