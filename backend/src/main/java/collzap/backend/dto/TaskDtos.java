@@ -105,7 +105,11 @@ public final class TaskDtos {
         int tasksDone,
         int reviewsGiven,
         int sessionsWatched,
-        List<ActivityItem> recentActivity
+        List<ActivityItem> recentActivity,
+        /** Peer matching is open (otherwise the student is on solo tasks). */
+        boolean matchingUnlocked,
+        /** Points at which matching opens (500 by default). */
+        int matchingUnlockPoints
     ) {
     }
 

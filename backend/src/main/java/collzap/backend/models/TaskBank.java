@@ -1,7 +1,10 @@
 package collzap.backend.models;
 
+import collzap.backend.enums.TaskTrack;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
@@ -41,6 +44,19 @@ public class TaskBank extends BaseEntity {
     /** At most one active bank per interest at a time — enforced in the service, not the schema. */
     @Column(name = "active", nullable = false)
     private boolean active = true;
+
+    /**
+     * Nullable on purpose: banks created before solo tasks existed have no value,
+     * and adding a NOT NULL column to a populated table would fail under
+     * ddl-auto=update. Null reads as GROUP — see {@link #track()}.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "track", length = 16)
+    private TaskTrack track;
+
+    public TaskTrack track() {
+        return track == null ? TaskTrack.GROUP : track;
+    }
 
     public TaskBank(Interest interest, String title) {
         this.interest = interest;

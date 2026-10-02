@@ -2,10 +2,11 @@ export const MAX_POINTS = 10000;
 
 // The six levels. `floor` is the first point value that counts as that level;
 // the percentage is simply points / 100, which is what the spec's % ranges are.
-// Only Seed's unlock exists today — the rest are shown as coming soon rather
-// than promising features that aren't built yet.
+// Seed is live: admin-reviewed solo tasks, and peer matching opens inside Seed at
+// the server's collzap.matching.unlock-points (500 by default). The higher levels
+// are shown as coming soon rather than promising features that aren't built yet.
 export const LEVELS = [
-  { name: 'Seed', floor: 0, tagline: 'Just getting started', unlock: 'Basic matching and chat', live: true },
+  { name: 'Seed', floor: 0, tagline: 'Just getting started', unlock: 'Daily tasks, then peer matching at 500 pts', live: true },
   { name: 'Sprout', floor: 2001, tagline: 'Building the habit', unlock: 'Mentorship session access', feature: 'Mentorship access' },
   { name: 'Growing', floor: 4001, tagline: 'Actively developing skills', unlock: 'Certification eligibility', feature: 'Certification' },
   { name: 'Thriving', floor: 6001, tagline: 'Consistently delivering', unlock: 'College leaderboard', feature: 'College leaderboard' },

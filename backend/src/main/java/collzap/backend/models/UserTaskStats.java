@@ -1,5 +1,6 @@
 package collzap.backend.models;
 
+import java.time.Instant;
 import java.time.LocalDate;
 
 import jakarta.persistence.Column;
@@ -40,6 +41,10 @@ public class UserTaskStats extends BaseEntity {
 
     @Column(name = "last_activity_date")
     private LocalDate lastActivityDate;
+
+    /** When peer matching opened for this user. Set once, never cleared. */
+    @Column(name = "matching_unlocked_at")
+    private Instant matchingUnlockedAt;
 
     public UserTaskStats(User user) {
         this.user = user;

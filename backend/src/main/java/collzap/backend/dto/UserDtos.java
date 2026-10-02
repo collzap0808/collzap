@@ -142,7 +142,10 @@ public final class UserDtos {
         int longTermInterestCount,
         int shortTermInterestCount,
         boolean seriousnessTestCompleted,
-        List<ConnectionTypeSelectionResponse> connectionTypes
+        List<ConnectionTypeSelectionResponse> connectionTypes,
+        /** Peer matching is open; until then the student does admin-reviewed solo tasks. */
+        boolean matchingUnlocked,
+        int matchingUnlockPoints
     ) {
     }
 

@@ -116,6 +116,9 @@ export default function AdminTaskBanksPage() {
   const [batch, setBatch] = useState(null); // { resolved, skipped }
   const [parseError, setParseError] = useState('');
   const [uploading, setUploading] = useState(false);
+  // GROUP banks feed matched groups (peer-reviewed); SOLO banks feed students who
+  // haven't unlocked matching yet (reviewed on Task reviews).
+  const [track, setTrack] = useState('GROUP');
 
   useEffect(() => {
     fetchInterests().catch(console.error);
@@ -145,7 +148,7 @@ export default function AdminTaskBanksPage() {
     const failed = [];
     for (const entry of batch.resolved) {
       try {
-        await uploadTaskBank(entry.interestId, entry.title, entry.tasks);
+        await uploadTaskBank(entry.interestId, entry.title, entry.tasks, track);
         succeeded += 1;
       } catch (err) {
         failed.push(`${entry.interestName}: ${err.message || 'failed'}`);
@@ -203,12 +206,19 @@ export default function AdminTaskBanksPage() {
         is matched by name against interests that already exist here; if one doesn't exist yet, that
         block is skipped rather than failing the whole batch — create the interest first, then re-paste.
         A bank is immutable once uploaded: uploading a new one for an interest just changes which bank
-        new groups start on, groups already mid-sequence keep the one they started with.
+        new groups start on, groups already mid-sequence keep the one they started with. Each interest
+        has one live group bank and one live solo bank; solo banks feed students who haven&rsquo;t unlocked
+        matching yet, so write them as tasks one person can do alone.
       </p>
 
       <div className="grid gap-8 lg:grid-cols-[1.1fr,0.9fr]">
         <div className="space-y-4 rounded-lg border border-line bg-surface p-5">
           <h2 className="font-display text-base font-bold text-ink">Bulk upload</h2>
+
+          <Select label="Who these tasks are for" value={track} onChange={(e) => setTrack(e.target.value)}>
+            <option value="GROUP">Matched groups (peer-reviewed)</option>
+            <option value="SOLO">Solo, before matching unlocks (admin-reviewed)</option>
+          </Select>
 
           <TextArea
             label="Paste task JSON — one block or an array of blocks"
@@ -281,6 +291,7 @@ export default function AdminTaskBanksPage() {
                     <p className="text-xs text-mute">{b.itemCount} days · {new Date(b.createdAt).toLocaleDateString()}</p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    <Badge variant={b.track === 'SOLO' ? 'primary' : 'secondary'}>{b.track === 'SOLO' ? 'Solo' : 'Group'}</Badge>
                     <Badge variant={b.active ? 'success' : 'secondary'}>{b.active ? 'Active' : 'Inactive'}</Badge>
                     {b.active && (
                       <Button size="sm" variant="ghost" onClick={() => handleDeactivate(b.id)}>Deactivate</Button>

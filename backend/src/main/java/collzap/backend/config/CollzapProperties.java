@@ -91,6 +91,11 @@ public class CollzapProperties {
         private boolean levelToleranceEnabled = true;
         /** Level assumed for short-term buddies, who do not sit the test. */
         private String shortTermDefaultLevel = "LEARNING";
+        /**
+         * Points a student needs before peer matching opens; until then they do
+         * admin-reviewed solo tasks. Lowering it later unlocks people at once.
+         */
+        private int unlockPoints = 500;
     }
 
     @Getter

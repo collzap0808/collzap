@@ -35,14 +35,17 @@ public class OnboardingService {
     private final ConnectionTypeSelectionRepository connectionTypeRepository;
     private final UserService userService;
     private final SeriousnessLevelLookup levelLookup;
+    private final MatchingAccessService matchingAccessService;
 
     public OnboardingService(
         UserProjectTypeSelectionRepository projectTypeRepository,
         UserInterestSelectionRepository interestSelectionRepository,
         ConnectionTypeSelectionRepository connectionTypeRepository,
         UserService userService,
-        SeriousnessLevelLookup levelLookup
+        SeriousnessLevelLookup levelLookup,
+        MatchingAccessService matchingAccessService
     ) {
+        this.matchingAccessService = matchingAccessService;
         this.projectTypeRepository = projectTypeRepository;
         this.interestSelectionRepository = interestSelectionRepository;
         this.connectionTypeRepository = connectionTypeRepository;
@@ -72,6 +75,7 @@ public class OnboardingService {
             .filter(s -> s.getProjectType() == ProjectType.LONG_TERM).count();
         int shortTermCount = (int) selections.stream()
             .filter(s -> s.getProjectType() == ProjectType.SHORT_TERM).count();
+        MatchingAccessService.AccessState access = matchingAccessService.state(userId);
 
         return new OnboardingStateResponse(
             resolveStep(user, projectTypes, selections, connectionTypes),
@@ -84,7 +88,9 @@ public class OnboardingService {
             isSeriousnessTestComplete(userId, selections),
             connectionTypes.stream()
                 .map(c -> new ConnectionTypeSelectionResponse(c.getProjectType(), c.getConnectionType()))
-                .toList()
+                .toList(),
+            access.unlocked(),
+            access.unlockPoints()
         );
     }
 

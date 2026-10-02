@@ -45,6 +45,9 @@ public interface MatchMemberRepository extends JpaRepository<MatchMember, UUID> 
 
     long countByMatchGroupIdAndActiveTrue(UUID matchGroupId);
 
+    /** Has this user ever been in a match group (active or not)? Grandfathers pre-lock users. */
+    boolean existsByUserId(UUID userId);
+
     @Query("select m.user.id from MatchMember m where m.matchGroup.id = :groupId and m.active = true")
     List<UUID> findActiveUserIdsByGroupId(@Param("groupId") UUID groupId);
 

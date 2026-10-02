@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
+import collzap.backend.enums.TaskTrack;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -59,7 +60,9 @@ public final class TaskBankDtos {
 
         @NotEmpty(message = "At least one day of tasks is required")
         @Valid
-        List<DailyTaskItemDto> tasks
+        List<DailyTaskItemDto> tasks,
+        /** GROUP (matched groups, peer-reviewed) or SOLO (pre-match, admin-reviewed). Defaults to GROUP. */
+        TaskTrack track
     ) {
     }
 
@@ -70,7 +73,8 @@ public final class TaskBankDtos {
         String title,
         boolean active,
         int itemCount,
-        Instant createdAt
+        Instant createdAt,
+        TaskTrack track
     ) {
     }
 

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { UserPlus, X } from 'lucide-react';
+import { PartyPopper, UserPlus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
@@ -12,6 +12,9 @@ import { api } from '../../api/api';
 import { useMatchStore } from '../../store/useMatchStore';
 import { useUserStore } from '../../store/useUserStore';
 import { useInterestStore } from '../../store/useInterestStore';
+import { useTaskStore } from '../../store/useTaskStore';
+import { useSoloTaskStore } from '../../store/useSoloTaskStore';
+import { MatchingLockedPanel } from '../../components/tasks/SoloTasks';
 import { page, useReducedMotion, transition } from '../../lib/motion';
 import ChatDrawer from '../chat/ChatDrawer';
 import ShortTermInterestModal from '../home/ShortTermInterestModal';
@@ -19,6 +22,8 @@ import {
   ExploreSection, FilterBar, GroupCard, MatchTabs, NoMatchesYet, PersonCard, SummaryRow, WaitingCard, WhyMatch,
 } from './MatchSections';
 import { peopleFromCircle } from './matchData';
+
+const UNLOCK_SEEN_KEY = 'collzap:matching-unlock-seen';
 
 // Long enough that the search's own latency doesn't make the overlay flash.
 const SEARCH_MIN_MS = 1400;
@@ -119,6 +124,11 @@ export default function MatchesPage() {
   const { circle, fetchCircle, findMatches, loading } = useMatchStore();
   const { profile, fetchMe } = useUserStore();
   const { myInterests, fetchMyInterests } = useInterestStore();
+  const { myStats, fetchMyStats } = useTaskStore();
+  const requestOpenNextTask = useSoloTaskStore((s) => s.requestOpenNextTask);
+  const [unlockSeen, setUnlockSeen] = useState(() => {
+    try { return localStorage.getItem(UNLOCK_SEEN_KEY) === '1'; } catch { return true; }
+  });
   const [activeTab, setActiveTab] = useState('PEOPLE');
   const [filters, setFilters] = useState(NO_FILTERS);
   const [matchResults, setMatchResults] = useState(null);
@@ -133,6 +143,7 @@ export default function MatchesPage() {
   useEffect(() => {
     fetchCircle().catch(console.error);
     fetchMyInterests().catch(() => {});
+    fetchMyStats().catch(() => {});
     if (!profile) fetchMe().catch(console.error);
     api.get('/interests/campus').then(setCampus).catch(() => setCampus([]));
   }, []);
@@ -141,6 +152,9 @@ export default function MatchesPage() {
   useEffect(() => () => clearTimeout(searchTimer.current), []);
 
   const isVerified = profile?.verificationStatus === 'APPROVED';
+  // New students earn matching with solo tasks first (see SoloTasksSection on the
+  // desk) — verified or not, Find peers stays off until they reach the unlock.
+  const matchingLocked = myStats?.matchingUnlocked === false;
   const connections = useMemo(() => circle?.connections || [], [circle]);
   const waiting = circle?.waiting || [];
   const people = useMemo(() => peopleFromCircle(connections), [connections]);
@@ -165,6 +179,9 @@ export default function MatchesPage() {
   });
 
   const handleFindMatches = async () => {
+    if (matchingLocked) {
+      return;
+    }
     if (!isVerified) {
       toast.error('Matching unlocks once someone checks your ID.');
       return;
@@ -186,6 +203,7 @@ export default function MatchesPage() {
         };
       }
     } catch (error) {
+      if (error.code === 'matching_locked') fetchMyStats().catch(() => {});
       onDone = () => toast.error(error.message || 'Could not find peers right now');
     } finally {
       // Hold the overlay a beat so a fast search doesn't just blink.
@@ -227,6 +245,7 @@ export default function MatchesPage() {
         </div>
         <Button
           onClick={handleFindMatches}
+          disabled={matchingLocked || locked}
           loading={loading || searching}
           variant="gradient"
           icon={<UserPlus className="h-4 w-4" />}
@@ -294,6 +313,32 @@ export default function MatchesPage() {
         )}
       </AnimatePresence>
 
+      {!matchingLocked && myStats?.matchingUnlocked && !unlockSeen && connections.length === 0 && waiting.length === 0 && (
+        <div className="flex items-start gap-3 rounded-lg border border-good/30 bg-good/[0.07] px-4 py-3">
+          <PartyPopper className="mt-0.5 h-5 w-5 shrink-0 text-good" aria-hidden="true" />
+          <p className="flex-1 text-sm text-ink">
+            <span className="font-semibold">Matching is unlocked.</span> You earned it with your daily tasks. Tap Find peers to meet people
+            on your campus who share your interests.
+          </p>
+          <button
+            onClick={() => { try { localStorage.setItem(UNLOCK_SEEN_KEY, '1'); } catch { /* storage blocked */ } setUnlockSeen(true); }}
+            aria-label="Dismiss"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-mute hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-500"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
+
+      {matchingLocked ? (
+        <MatchingLockedPanel
+          points={myStats?.totalPoints ?? 0}
+          unlockPoints={myStats?.matchingUnlockPoints}
+          verified={isVerified}
+          onGoToTasks={() => { requestOpenNextTask(); navigate('/home'); }}
+        />
+      ) : (
+      <>
       <SummaryRow items={summary} />
 
       <section className="space-y-4" aria-label="Your matches">
@@ -333,6 +378,8 @@ export default function MatchesPage() {
           </ul>
         ))}
       </section>
+      </>
+      )}
 
       <ExploreSection counts={campus} mine={mine} onPickShortTerm={() => setGoalOpen(true)} />
 

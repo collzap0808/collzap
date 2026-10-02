@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +39,7 @@ import collzap.backend.models.User;
 import collzap.backend.models.UserTaskStats;
 import collzap.backend.repositories.MatchMemberRepository;
 import collzap.backend.repositories.SessionAttendanceRepository;
+import collzap.backend.repositories.SoloTaskSubmissionRepository;
 import collzap.backend.repositories.TaskAssignmentRepository;
 import collzap.backend.repositories.TaskReviewRepository;
 import collzap.backend.repositories.TaskSubmissionRepository;
@@ -64,6 +66,8 @@ public class TaskSubmissionService {
     private final SessionAttendanceRepository sessionAttendanceRepository;
     private final UserService userService;
     private final NotificationService notificationService;
+    private final SoloTaskSubmissionRepository soloTaskSubmissionRepository;
+    private final MatchingAccessService matchingAccessService;
 
     public TaskSubmissionService(
         TaskAssignmentService taskAssignmentService,
@@ -74,8 +78,12 @@ public class TaskSubmissionService {
         UserTaskStatsRepository userTaskStatsRepository,
         SessionAttendanceRepository sessionAttendanceRepository,
         UserService userService,
-        NotificationService notificationService
+        NotificationService notificationService,
+        SoloTaskSubmissionRepository soloTaskSubmissionRepository,
+        MatchingAccessService matchingAccessService
     ) {
+        this.soloTaskSubmissionRepository = soloTaskSubmissionRepository;
+        this.matchingAccessService = matchingAccessService;
         this.taskAssignmentService = taskAssignmentService;
         this.matchMemberRepository = matchMemberRepository;
         this.taskAssignmentRepository = taskAssignmentRepository;
@@ -183,7 +191,7 @@ public class TaskSubmissionService {
         // it); anything older means the streak is broken and reads as 0.
         LocalDate today = LocalDate.now(TaskAssignmentService.TASK_ZONE);
 
-        int tasksDone = (int) taskSubmissionRepository.countByUserId(userId);
+        int tasksDone = (int) (taskSubmissionRepository.countByUserId(userId) + soloTaskSubmissionRepository.countByUserId(userId));
         int reviewsGiven = (int) taskReviewRepository.countByReviewerId(userId);
         int sessionsWatched = (int) sessionAttendanceRepository.countByUserIdAndCompletedAtIsNotNull(userId);
 
@@ -194,6 +202,16 @@ public class TaskSubmissionService {
         });
         taskReviewRepository.findTop3ByReviewerIdOrderByReviewedAtDesc(userId).forEach(r -> activity.add(new ActivityItem(
             "REVIEW", "Reviewed: " + r.getSubmission().getTaskAssignment().getTaskBankItem().getTitle(), REVIEW_POINTS, r.getReviewedAt())));
+        // Solo tasks: points only once an admin approves, so pending work shows 0.
+        soloTaskSubmissionRepository.findLatestByUser(userId, PageRequest.of(0, 3)).forEach(s -> {
+            String title = s.getAssignment().getTaskBankItem().getTitle();
+            String suffix = switch (s.getStatus()) {
+                case PENDING -> " · pending review";
+                case CHANGES_REQUESTED -> " · changes requested";
+                case APPROVED -> "";
+            };
+            activity.add(new ActivityItem("TASK", title + suffix, s.getPointsAwarded(), s.getSubmittedAt()));
+        });
         sessionAttendanceRepository.findTop3ByUserIdAndCompletedAtIsNotNullOrderByCompletedAtDesc(userId).forEach(a -> activity.add(new ActivityItem(
             "SESSION", "Watched: " + a.getSession().getTitle(), a.getPointsAwarded(), a.getCompletedAt())));
         List<ActivityItem> recent = activity.stream()
@@ -201,15 +219,17 @@ public class TaskSubmissionService {
             .limit(3)
             .toList();
 
+        MatchingAccessService.AccessState access = matchingAccessService.state(userId);
         return userTaskStatsRepository.findByUserId(userId)
             .map(s -> {
                 LocalDate last = s.getLastActivityDate();
                 boolean alive = last != null && !last.isBefore(today.minusDays(1));
                 return new UserTaskStatsResponse(
                     s.getTotalPoints(), alive ? s.getCurrentStreakDays() : 0, s.getLongestStreakDays(),
-                    tasksDone, reviewsGiven, sessionsWatched, recent);
+                    tasksDone, reviewsGiven, sessionsWatched, recent, access.unlocked(), access.unlockPoints());
             })
-            .orElse(new UserTaskStatsResponse(0, 0, 0, tasksDone, reviewsGiven, sessionsWatched, recent));
+            .orElse(new UserTaskStatsResponse(0, 0, 0, tasksDone, reviewsGiven, sessionsWatched, recent,
+                access.unlocked(), access.unlockPoints()));
     }
 
     /**
@@ -227,14 +247,22 @@ public class TaskSubmissionService {
         Instant from = month.atDay(1).atStartOfDay(zone).toInstant();
         Instant to = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant();
 
+        List<Instant> submittedAt = new ArrayList<>(taskSubmissionRepository.findSubmittedAtByUserBetween(userId, from, to));
+        submittedAt.addAll(soloTaskSubmissionRepository.findSubmittedAtByUserBetween(userId, from, to));
         Map<LocalDate, Long> counts = new TreeMap<>(
-            taskSubmissionRepository.findSubmittedAtByUserBetween(userId, from, to).stream()
+            submittedAt.stream()
                 .collect(Collectors.groupingBy(i -> i.atZone(zone).toLocalDate(), Collectors.counting()))
         );
         List<DayCount> days = counts.entrySet().stream()
             .map(e -> new DayCount(e.getKey(), e.getValue().intValue()))
             .toList();
         return new TaskCalendarResponse(month.toString(), days);
+    }
+
+    /** A solo-task submission: keeps the streak alive now; its points arrive when an admin approves. */
+    @Transactional
+    public void recordShowingUp(User user) {
+        creditActivity(user, 0, true);
     }
 
     /** Points for something other than a task (e.g. a watched mentoring session) — never touches the streak. */

@@ -16,6 +16,8 @@ export const useAdminStore = create((set) => ({
   interests: [],
   taskBanks: [],
   sessions: [],
+  soloSubmissions: [],
+  soloPendingCount: 0,
   loading: false,
   error: null,
 
@@ -377,10 +379,10 @@ export const useAdminStore = create((set) => ({
     }
   },
 
-  uploadTaskBank: async (interestId, title, tasks) => {
+  uploadTaskBank: async (interestId, title, tasks, track = 'GROUP') => {
     set({ loading: true, error: null });
     try {
-      const response = await api.post('/admin/task-banks', { interestId, title, tasks });
+      const response = await api.post('/admin/task-banks', { interestId, title, tasks, track });
       set({ loading: false });
       return response;
     } catch (error) {
@@ -422,6 +424,29 @@ export const useAdminStore = create((set) => ({
 
   deleteSession: async (id) => {
     return api.delete(`/admin/sessions/${id}`);
+  },
+
+  // Solo-task review queue (students who haven't unlocked matching yet).
+  fetchSoloSubmissions: async (status = 'PENDING') => {
+    set({ loading: true, error: null });
+    try {
+      const soloSubmissions = await api.get('/admin/solo-submissions', { params: { status } });
+      set({ soloSubmissions, loading: false });
+      return soloSubmissions;
+    } catch (error) {
+      set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
+  fetchSoloPendingCount: async () => {
+    const { pending } = await api.get('/admin/solo-submissions/pending-count');
+    set({ soloPendingCount: pending });
+    return pending;
+  },
+
+  reviewSoloSubmission: async (submissionId, payload) => {
+    return api.post(`/admin/solo-submissions/${submissionId}/review`, payload);
   },
 
   runTaskRolloverNow: async () => {

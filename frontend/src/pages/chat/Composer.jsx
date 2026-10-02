@@ -11,12 +11,17 @@ import { snappy, transition, useReducedMotion } from '../../lib/motion';
 // people actually reach for in a working chat.
 const EMOJI = ['😀', '😂', '🙂', '😅', '🤔', '😮', '🙏', '👍', '👏', '🙌', '💪', '🔥', '✅', '🎉', '💡', '📌', '📚', '💻', '🚀', '❤️'];
 
-const MAX_BYTES = 10 * 1024 * 1024;
-const ACCEPT = 'image/jpeg,image/png,image/webp,application/pdf';
+// Chat takes images only. `accept` is just a hint to the picker (Windows still
+// offers "All files"), so the type and extension are checked again before upload;
+// the server re-checks the actual bytes too.
+const MAX_BYTES = 5 * 1024 * 1024;
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ACCEPT = IMAGE_TYPES.join(',');
+const isChatImage = (file) => IMAGE_TYPES.includes(file.type) && /\.(jpe?g|png|webp)$/i.test(file.name);
 
 /**
- * The message box. Attachments upload first, then go into the thread as their
- * link — the chat stays plain text, and images render inline from that link.
+ * The message box. Image attachments upload first, then go into the thread as
+ * their link — the chat stays plain text, and images render inline from that link.
  * `ref` exposes `focus()`, `insert(text)` and `attach()` so the workspace and
  * the empty state can drive it.
  */
@@ -77,8 +82,12 @@ export default function Composer({ ref, onSend, sending, suggestions = [], disab
     const file = e.target.files?.[0];
     e.target.value = '';
     if (!file) return;
+    if (!isChatImage(file)) {
+      toast.error('Only images (JPG, PNG or WebP) can be shared in chat.');
+      return;
+    }
     if (file.size > MAX_BYTES) {
-      toast.error('That file is over 10 MB');
+      toast.error('That image is over 5 MB');
       return;
     }
     setUploading(true);
@@ -138,7 +147,7 @@ export default function Composer({ ref, onSend, sending, suggestions = [], disab
           )}
         >
           <input ref={fileRef} type="file" accept={ACCEPT} className="hidden" onChange={handleFile} tabIndex={-1} />
-          <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || disabled} aria-label="Attach an image or PDF" className={iconBtn}>
+          <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || disabled} aria-label="Attach an image" className={iconBtn}>
             {uploading ? <Spinner size="sm" /> : <Paperclip className="h-[18px] w-[18px]" aria-hidden="true" />}
           </button>
 

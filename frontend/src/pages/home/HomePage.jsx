@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CalendarDays, Clock3, MessageSquare, UserPlus, Users } from 'lucide-react';
+import { CalendarDays, ClipboardCheck, Clock3, MessageSquare, UserPlus, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../../components/ui/Button';
 import ShortTermInterestModal from './ShortTermInterestModal';
 import TaskCalendar from '../../components/tasks/TaskCalendar';
+import { SoloTasksSection } from '../../components/tasks/SoloTasks';
+import { useSoloTaskStore } from '../../store/useSoloTaskStore';
 import {
   ComingSoon, ContinueSection, GoalStrip, OverviewRow, PeopleSection, ProgressCard, UpcomingEvents,
 } from './DeskSections';
@@ -30,6 +32,7 @@ export default function HomePage() {
   const { projectTypes, myInterests, fetchProjectTypes, fetchMyInterests, selectProjectTypes } = useInterestStore();
   const { myStats, fetchMyStats } = useTaskStore();
   const { sessions, loading: sessionsLoading, fetchSessions } = useSessionStore();
+  const openNextTask = useSoloTaskStore((s) => s.openNextTask);
   const [shortTermModalOpen, setShortTermModalOpen] = useState(false);
   const [addingLongTerm, setAddingLongTerm] = useState(false);
   const [submittedToday, setSubmittedToday] = useState(false);
@@ -76,6 +79,8 @@ export default function HomePage() {
   const unread = chats.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
   const firstName = profile?.name?.split(' ')[0];
   const streak = myStats?.currentStreakDays ?? 0;
+  // New students start with matching locked and earn it through solo tasks.
+  const matchingLocked = myStats?.matchingUnlocked === false;
 
   const featured = sessions?.featured;
   // The live session leads (if there's one left to watch), then what's scheduled.
@@ -111,26 +116,48 @@ export default function HomePage() {
           </h1>
           <p className="mt-1.5 text-sm text-mute">Here&rsquo;s what&rsquo;s happening with your campus network.</p>
         </div>
-        <Button
-          variant="gradient"
-          onClick={() => navigate('/matches')}
-          icon={<UserPlus className="h-4 w-4" />}
-          className="shrink-0"
-        >
-          Find people
-        </Button>
+        {matchingLocked ? (
+          <Button
+            variant="gradient"
+            onClick={() => {
+              if (openNextTask()) return;
+              toast(profile?.verificationStatus === 'APPROVED'
+                ? 'Your first task is being prepared. Check back soon.'
+                : 'Your daily tasks start as soon as your student ID is approved.');
+              document.getElementById('daily-tasks')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
+            icon={<ClipboardCheck className="h-4 w-4" />}
+            className="shrink-0"
+          >
+            Today&rsquo;s tasks
+          </Button>
+        ) : (
+          <Button
+            variant="gradient"
+            onClick={() => navigate('/matches')}
+            icon={<UserPlus className="h-4 w-4" />}
+            className="shrink-0"
+          >
+            Find people
+          </Button>
+        )}
       </header>
 
       {/* Below desktop the rail drops under everything else, which would bury
           the tracker — so on phones and tablets it leads the page instead. */}
-      <div className="lg:hidden">
-        <ProgressCard stats={myStats} />
-      </div>
+      {/* While matching is locked the daily-tasks card leads instead (it carries
+          its own progress bar), and the tracker moves down to the rail. */}
+      {!matchingLocked && (
+        <div className="lg:hidden">
+          <ProgressCard stats={myStats} />
+        </div>
+      )}
 
       {/* The work on the left; your own progress and month on the right, so
           the rail fills the height the lists leave instead of a bottom row. */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_21rem]">
         <div className="min-w-0 space-y-8">
+          {matchingLocked && <SoloTasksSection verified={profile?.verificationStatus === 'APPROVED'} />}
           <OverviewRow items={overview} />
           <UpcomingEvents events={events} loading={!sessions && sessionsLoading} />
           <div className="grid grid-cols-1 gap-8 xl:grid-cols-2 xl:gap-5">
@@ -148,7 +175,7 @@ export default function HomePage() {
         </div>
 
         <aside className="min-w-0 space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0 lg:block lg:space-y-4" aria-label="Your progress">
-          <div className="hidden lg:block">
+          <div className={matchingLocked ? undefined : 'hidden lg:block'}>
             <ProgressCard stats={myStats} />
           </div>
           <TaskCalendar className="max-w-none" />

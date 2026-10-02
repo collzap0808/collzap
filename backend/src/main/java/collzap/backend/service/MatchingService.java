@@ -75,6 +75,7 @@ public class MatchingService {
     private final ChatBroadcaster chatBroadcaster;
     private final UserService userService;
     private final CollzapProperties properties;
+    private final MatchingAccessService matchingAccessService;
 
     public MatchingService(
         UserRepository userRepository,
@@ -89,8 +90,10 @@ public class MatchingService {
         NotificationService notificationService,
         ChatBroadcaster chatBroadcaster,
         UserService userService,
-        CollzapProperties properties
+        CollzapProperties properties,
+        MatchingAccessService matchingAccessService
     ) {
+        this.matchingAccessService = matchingAccessService;
         this.userRepository = userRepository;
         this.selectionRepository = selectionRepository;
         this.connectionTypeRepository = connectionTypeRepository;
@@ -117,6 +120,9 @@ public class MatchingService {
             throw new ForbiddenException(
                 "Your college verification is still being reviewed. We will open matching as soon as it clears.");
         }
+        // New students earn matching with solo daily tasks first. Admin manual
+        // matches (createManualMatch) deliberately skip this check.
+        matchingAccessService.requireUnlocked(user);
 
         Map<ProjectType, ConnectionType> connectionTypes = connectionTypesOf(userId);
         List<UserInterestSelection> selections = selectionRepository.findAllWithInterestByUserId(userId);

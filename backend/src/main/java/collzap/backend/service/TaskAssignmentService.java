@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import collzap.backend.dto.TaskDtos.TaskAssignmentResponse;
 import collzap.backend.enums.MatchGroupStatus;
 import collzap.backend.enums.NotificationType;
+import collzap.backend.enums.TaskTrack;
 import collzap.backend.exception.ForbiddenException;
 import collzap.backend.exception.NotFoundException;
 import collzap.backend.models.GroupTaskProgress;
@@ -101,7 +102,7 @@ public class TaskAssignmentService {
         }
 
         for (TaskBank bank : taskBankRepository.findAllWithInterest()) {
-            if (!bank.isActive()) continue;
+            if (!bank.isActive() || bank.track() != TaskTrack.GROUP) continue;
             List<MatchGroup> activeGroups = matchGroupRepository
                 .findByStatusAndInterestId(MatchGroupStatus.ACTIVE, bank.getInterest().getId());
             for (MatchGroup group : activeGroups) {
@@ -162,7 +163,7 @@ public class TaskAssignmentService {
 
         GroupTaskProgress progress = groupTaskProgressRepository.findByMatchGroupId(matchGroupId)
             .orElseGet(() -> {
-                TaskBank bank = taskBankRepository.findByInterestIdAndActiveTrue(group.getInterest().getId())
+                TaskBank bank = taskBankRepository.findActiveGroupBank(group.getInterest().getId())
                     .orElse(null);
                 if (bank == null) {
                     log.debug("Skipping group {}: interest {} has no active task bank", matchGroupId, group.getInterest().getId());

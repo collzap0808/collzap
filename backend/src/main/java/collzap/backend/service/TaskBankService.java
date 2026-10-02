@@ -10,6 +10,7 @@ import collzap.backend.dto.TaskBankDtos.DailyTaskItemDto;
 import collzap.backend.dto.TaskBankDtos.TaskBankItemResponse;
 import collzap.backend.dto.TaskBankDtos.TaskBankResponse;
 import collzap.backend.dto.TaskBankDtos.UploadTaskBankRequest;
+import collzap.backend.enums.TaskTrack;
 import collzap.backend.exception.BadRequestException;
 import collzap.backend.exception.NotFoundException;
 import collzap.backend.models.Interest;
@@ -53,13 +54,20 @@ public class TaskBankService {
             throw new BadRequestException("Two tasks share the same day number — each day must be unique");
         }
 
-        taskBankRepository.findByInterestIdAndActiveTrue(interest.getId())
+        // One live bank per (interest, track): a new solo bank replaces the old solo
+        // bank and leaves the group bank alone, and vice versa.
+        TaskTrack track = request.track() == null ? TaskTrack.GROUP : request.track();
+        (track == TaskTrack.SOLO
+            ? taskBankRepository.findActiveSoloBank(interest.getId())
+            : taskBankRepository.findActiveGroupBank(interest.getId()))
             .ifPresent(existing -> {
                 existing.setActive(false);
                 taskBankRepository.save(existing);
             });
 
-        TaskBank bank = taskBankRepository.save(new TaskBank(interest, request.title().trim()));
+        TaskBank newBank = new TaskBank(interest, request.title().trim());
+        newBank.setTrack(track);
+        TaskBank bank = taskBankRepository.save(newBank);
         for (DailyTaskItemDto task : request.tasks()) {
             taskBankItemRepository.save(new TaskBankItem(
                 bank,
@@ -113,7 +121,8 @@ public class TaskBankService {
             bank.getTitle(),
             bank.isActive(),
             itemCount,
-            bank.getCreatedAt()
+            bank.getCreatedAt(),
+            bank.track()
         );
     }
 

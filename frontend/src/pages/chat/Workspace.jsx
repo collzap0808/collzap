@@ -135,7 +135,7 @@ export default function Workspace({ room, onOpenTask, onShareFile }) {
     other
       ? { icon: UserRound, label: 'View profile', to: `/profile/${other.userId}` }
       : room.matchGroupId && { icon: Users, label: 'View group', to: `/matches/${room.matchGroupId}` },
-    { icon: Paperclip, label: 'Share a file', onClick: onShareFile },
+    { icon: Paperclip, label: 'Share an image', onClick: onShareFile },
     { icon: PlayCircle, label: 'Mentor sessions', to: '/sessions' },
   ].filter(Boolean);
 

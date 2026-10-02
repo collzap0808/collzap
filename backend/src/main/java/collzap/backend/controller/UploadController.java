@@ -55,8 +55,9 @@ public class UploadController {
         if (folder == null) {
             throw new BadRequestException("Invalid category. Must be DOCUMENT, PROFILE_PHOTO, TASK_SUBMISSION or CHAT_ATTACHMENT");
         }
-        // Chat attachments share the task policy: images or a PDF, up to 10 MB.
-        var policy = upperCategory.equals("TASK_SUBMISSION") || upperCategory.equals("CHAT_ATTACHMENT")
+        // Only task submissions may be a PDF. Chat attachments are images only — the
+        // signature check rejects text, code and PDFs by their bytes, not the name.
+        var policy = upperCategory.equals("TASK_SUBMISSION")
             ? DocumentUploadService.TASK_SUBMISSION_10MB
             : DocumentUploadService.IMAGE_5MB;
         String url = documentUploadService.validateAndUpload(file, folder, policy);

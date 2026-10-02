@@ -108,7 +108,7 @@ export default function PotentialTracker({ stats, className }) {
               <span className="font-semibold text-ink">{next.name}</span>
             </p>
             <p className="mt-1 flex flex-wrap items-center gap-2">
-              Unlocks {next.unlock.toLowerCase()} <Badge variant="default">Coming soon</Badge>
+              Unlocks {next.unlock.toLowerCase()} {!next.live && <Badge variant="default">Coming soon</Badge>}
             </p>
           </>
         ) : (
