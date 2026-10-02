@@ -34,5 +34,11 @@ public class SchemaFixups implements ApplicationRunner {
         } catch (RuntimeException ex) {
             log.warn("Could not drop notifications_type_check; new notification types may fail to save", ex);
         }
+        try {
+            // Superseded by uk_solo_assignment_progress_item (see SoloTaskAssignment).
+            jdbc.execute("ALTER TABLE solo_task_assignments DROP CONSTRAINT IF EXISTS uk_solo_assignment_progress_day");
+        } catch (RuntimeException ex) {
+            log.warn("Could not drop uk_solo_assignment_progress_day", ex);
+        }
     }
 }

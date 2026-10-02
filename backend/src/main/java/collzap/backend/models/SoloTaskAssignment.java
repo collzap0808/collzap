@@ -15,14 +15,15 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * One day's solo task as it landed for one student. The unique (progress, day)
- * constraint is the backstop against handing out the same day twice, exactly as
- * {@link TaskAssignment}'s is for groups.
+ * One day's solo task as it landed for one student. The unique (progress, item)
+ * constraint is the backstop against handing out the same task twice. It is
+ * keyed on the bank item rather than the day number because a student whose
+ * track ran out can be moved onto a newer bank whose days start again at 1.
  */
 @Entity
 @Table(
     name = "solo_task_assignments",
-    uniqueConstraints = @UniqueConstraint(name = "uk_solo_assignment_progress_day", columnNames = {"solo_task_progress_id", "day_index"}),
+    uniqueConstraints = @UniqueConstraint(name = "uk_solo_assignment_progress_item", columnNames = {"solo_task_progress_id", "task_bank_item_id"}),
     indexes = @Index(name = "idx_solo_assignments_user_id", columnList = "user_id")
 )
 @Getter

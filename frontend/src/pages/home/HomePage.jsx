@@ -6,7 +6,7 @@ import Button from '../../components/ui/Button';
 import ShortTermInterestModal from './ShortTermInterestModal';
 import TaskCalendar from '../../components/tasks/TaskCalendar';
 import { SoloTasksSection } from '../../components/tasks/SoloTasks';
-import { useSoloTaskStore } from '../../store/useSoloTaskStore';
+import { soloEmptyMessage, useSoloTaskStore } from '../../store/useSoloTaskStore';
 import {
   ComingSoon, ContinueSection, GoalStrip, OverviewRow, PeopleSection, ProgressCard, UpcomingEvents,
 } from './DeskSections';
@@ -33,6 +33,7 @@ export default function HomePage() {
   const { myStats, fetchMyStats } = useTaskStore();
   const { sessions, loading: sessionsLoading, fetchSessions } = useSessionStore();
   const openNextTask = useSoloTaskStore((s) => s.openNextTask);
+  const soloEmptyReason = useSoloTaskStore((s) => s.soloTasks?.emptyReason);
   const [shortTermModalOpen, setShortTermModalOpen] = useState(false);
   const [addingLongTerm, setAddingLongTerm] = useState(false);
   const [submittedToday, setSubmittedToday] = useState(false);
@@ -121,9 +122,7 @@ export default function HomePage() {
             variant="gradient"
             onClick={() => {
               if (openNextTask()) return;
-              toast(profile?.verificationStatus === 'APPROVED'
-                ? 'Your first task is being prepared. Check back soon.'
-                : 'Your daily tasks start as soon as your student ID is approved.');
+              toast(soloEmptyMessage(soloEmptyReason ?? (profile?.verificationStatus === 'APPROVED' ? null : 'NOT_VERIFIED')));
               document.getElementById('daily-tasks')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }}
             icon={<ClipboardCheck className="h-4 w-4" />}

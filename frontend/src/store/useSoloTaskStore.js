@@ -1,6 +1,17 @@
 import { create } from 'zustand';
 import { api } from '../api/api';
 
+/** What to tell a student when there is no task to show, by the server's `emptyReason`. */
+export function soloEmptyMessage(reason) {
+  switch (reason) {
+    case 'NOT_VERIFIED': return 'Your daily tasks start as soon as your student ID is approved.';
+    case 'NO_INTERESTS': return 'Pick an interest on your profile to get daily tasks.';
+    case 'NO_BANK': return "Tasks for your interests haven't been added yet. Check back soon.";
+    case 'ALL_DONE': return "You've finished every task we have for now. New ones are on the way.";
+    default: return 'Your first task is being prepared. Check back soon.';
+  }
+}
+
 /**
  * Solo daily tasks: what a student works on before peer matching unlocks.
  * `soloTasks` is `{ locked, points, unlockPoints, tasks: [...] }`.

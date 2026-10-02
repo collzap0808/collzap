@@ -47,8 +47,9 @@ import collzap.backend.repositories.UserInterestSelectionRepository;
 /**
  * Solo daily tasks: what a student does before peer matching unlocks.
  *
- * <p>Each selected interest that has an active SOLO bank gives the student one
- * task a day, on their own clock ({@link SoloTaskProgress}). An admin reviews
+ * <p>Each selected interest gives the student one task a day, on their own
+ * clock ({@link SoloTaskProgress}), from the interest's SOLO bank or, when no
+ * solo bank has been uploaded for it, its active GROUP bank. An admin reviews
  * every submission; points are credited only on approval, and the approval that
  * carries a student past the unlock threshold opens matching for them. Once a
  * student is unlocked no new solo days are handed out — matched groups take over
@@ -111,24 +112,40 @@ public class SoloTaskService {
         MatchingAccessService.AccessState access = matchingAccessService.state(userId);
         LocalDate today = LocalDate.now(TaskAssignmentService.TASK_ZONE);
 
+        boolean verified = user.getVerificationStatus() == VerificationStatus.APPROVED;
+        List<Interest> interests = interestsOf(userId);
         List<SoloTaskItem> tasks = new ArrayList<>();
-        for (Interest interest : interestsOf(userId)) {
+        boolean anyBank = false;
+        boolean allDone = !interests.isEmpty();
+        for (Interest interest : interests) {
             SoloTaskProgress progress = progressRepository.findByUserIdAndInterestId(userId, interest.getId()).orElse(null);
-            if (progress == null && !access.unlocked() && user.getVerificationStatus() == VerificationStatus.APPROVED) {
-                TaskBank bank = taskBankRepository.findActiveSoloBank(interest.getId()).orElse(null);
-                if (bank != null) {
+            if (!access.unlocked() && verified) {
+                TaskBank bank = bankFor(interest.getId()).orElse(null);
+                anyBank |= bank != null;
+                if (progress == null && bank != null) {
                     progress = progressRepository.save(new SoloTaskProgress(user, interest, bank));
+                } else if (progress != null && bank != null) {
+                    repinIfFinished(progress, bank);
                 }
             }
             if (progress == null) {
+                allDone = false;
                 continue;
             }
             if (!access.unlocked()) {
                 advance(progress, today);
             }
+            allDone &= progress.getCompletedAt() != null;
             currentAssignment(progress).ifPresent(a -> tasks.add(toItem(a, interest)));
         }
-        return new SoloTasksResponse(!access.unlocked(), access.points(), access.unlockPoints(), tasks);
+        String emptyReason = null;
+        if (tasks.isEmpty()) {
+            if (!verified) emptyReason = "NOT_VERIFIED";
+            else if (interests.isEmpty()) emptyReason = "NO_INTERESTS";
+            else if (allDone) emptyReason = "ALL_DONE";
+            else if (!anyBank) emptyReason = "NO_BANK";
+        }
+        return new SoloTasksResponse(!access.unlocked(), access.points(), access.unlockPoints(), tasks, emptyReason);
     }
 
     @Transactional
@@ -269,10 +286,37 @@ public class SoloTaskService {
 
     /* ------------------------------------------------------------ helpers */
 
+    /** The interest's solo bank, falling back to its group bank so an interest with only group tasks still works. */
+    private Optional<TaskBank> bankFor(UUID interestId) {
+        return taskBankRepository.findActiveSoloBank(interestId).or(() -> taskBankRepository.findActiveGroupBank(interestId));
+    }
+
     /**
-     * Hands out the next day, at most once per IST day, and only once the current
-     * day has been submitted — a student who skips a day picks up where they left
-     * off instead of finding a pile of missed tasks.
+     * A track that ran out moves onto the interest's current bank when that is a
+     * different (newer) bank, e.g. the admin uploaded Month 2, so a finished
+     * student isn't stuck. A track that "finished" without ever handing out a
+     * task (a bank with no usable days at the time) is simply reopened.
+     */
+    private void repinIfFinished(SoloTaskProgress progress, TaskBank bank) {
+        if (progress.getCompletedAt() == null) {
+            return;
+        }
+        boolean neverStarted = currentAssignment(progress).isEmpty();
+        if (!neverStarted && bank.getId().equals(progress.getTaskBank().getId())) {
+            return;
+        }
+        progress.setTaskBank(bank);
+        progress.setCurrentDayIndex(0);
+        progress.setCompletedAt(null);
+        progress.setLastAssignedDate(null);
+        progressRepository.save(progress);
+    }
+
+    /**
+     * Hands out the bank's next day, at most once per IST day, and only once the
+     * current one has been submitted. A student who skips a day picks up where
+     * they left off instead of finding a pile of missed tasks. "Next" is the next
+     * day number present in the bank, so a bank starting at day 31 works too.
      */
     private Optional<SoloTaskAssignment> advance(SoloTaskProgress progress, LocalDate today) {
         if (progress.getCompletedAt() != null || today.equals(progress.getLastAssignedDate())) {
@@ -282,19 +326,20 @@ public class SoloTaskService {
         if (current.isPresent() && submissionRepository.findByAssignmentId(current.get().getId()).isEmpty()) {
             return Optional.empty();
         }
-        int nextDay = progress.getCurrentDayIndex() + 1;
-        Optional<TaskBankItem> item = taskBankItemRepository.findByTaskBankIdAndDayIndex(progress.getTaskBank().getId(), nextDay);
+        Optional<TaskBankItem> item = taskBankItemRepository
+            .findFirstByTaskBankIdAndDayIndexGreaterThanOrderByDayIndexAsc(progress.getTaskBank().getId(), progress.getCurrentDayIndex());
         if (item.isEmpty()) {
             progress.setCompletedAt(Instant.now());
             progressRepository.save(progress);
             return Optional.empty();
         }
+        int day = item.get().getDayIndex();
         SoloTaskAssignment assignment = assignmentRepository.save(
-            new SoloTaskAssignment(progress, progress.getUser(), item.get(), nextDay, Instant.now()));
-        progress.setCurrentDayIndex(nextDay);
+            new SoloTaskAssignment(progress, progress.getUser(), item.get(), day, Instant.now()));
+        progress.setCurrentDayIndex(day);
         progress.setLastAssignedDate(today);
         progressRepository.save(progress);
-        log.debug("Solo day {} assigned to user {} for interest {}", nextDay, progress.getUser().getId(), progress.getInterest().getId());
+        log.debug("Solo day {} assigned to user {} for interest {}", day, progress.getUser().getId(), progress.getInterest().getId());
         return Optional.of(assignment);
     }
 

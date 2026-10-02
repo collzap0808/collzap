@@ -11,10 +11,14 @@ import collzap.backend.models.SoloTaskAssignment;
 
 public interface SoloTaskAssignmentRepository extends JpaRepository<SoloTaskAssignment, UUID> {
 
-    /** Days handed to this progress row, newest first; the first is the student's current task. */
+    /**
+     * Days handed to this progress row, newest first; the first is the student's
+     * current task. Ordered by when they were handed out, not day number, because
+     * a student moved onto a replacement bank can start again at a lower day.
+     */
     @Query("""
         select a from SoloTaskAssignment a join fetch a.taskBankItem
-        where a.progress.id = :progressId order by a.dayIndex desc
+        where a.progress.id = :progressId order by a.assignedAt desc
         """)
     List<SoloTaskAssignment> findByProgressNewestFirst(@Param("progressId") UUID progressId);
 }

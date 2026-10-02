@@ -5,7 +5,7 @@ import Button from '../ui/Button';
 import Modal from '../ui/Modal';
 import Spinner from '../ui/Spinner';
 import { cn } from '../../lib/utils';
-import { useSoloTaskStore } from '../../store/useSoloTaskStore';
+import { soloEmptyMessage, useSoloTaskStore } from '../../store/useSoloTaskStore';
 import { useTaskStore } from '../../store/useTaskStore';
 import { Attachment, LinkOut, TaskBrief, TaskSubmitForm } from './TaskParts';
 
@@ -155,10 +155,10 @@ export function SoloTasksSection({ id = 'daily-tasks', verified = true }) {
       <div className="mt-5">
         {!soloTasks && loading ? (
           <div className="flex justify-center py-6 text-accent-500"><Spinner /></div>
-        ) : !verified ? (
-          <p className="rounded-md bg-surface-2 px-4 py-3 text-sm text-mute">Your tasks start as soon as your student ID is approved.</p>
         ) : tasks.length === 0 ? (
-          <p className="rounded-md bg-surface-2 px-4 py-3 text-sm text-mute">Your first task is being prepared. Check back soon.</p>
+          <p className="rounded-md bg-surface-2 px-4 py-3 text-sm text-mute">
+            {soloEmptyMessage(soloTasks?.emptyReason ?? (verified ? null : 'NOT_VERIFIED'))}
+          </p>
         ) : (
           <ul className="divide-y divide-line rounded-md border border-line">
             {tasks.map((t) => {

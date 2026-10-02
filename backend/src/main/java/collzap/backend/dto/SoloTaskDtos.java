@@ -53,9 +53,12 @@ public final class SoloTaskDtos {
      * @param locked        peer matching still locked (solo tasks are the way in)
      * @param points        the student's total points
      * @param unlockPoints  points at which matching opens
-     * @param tasks         the current task for each interest that has a solo bank
+     * @param tasks         the current task for each interest that has a task bank
+     * @param emptyReason   why {@code tasks} is empty, else null: NOT_VERIFIED,
+     *                      NO_INTERESTS, NO_BANK (no active bank for any of the
+     *                      student's interests) or ALL_DONE (every bank finished)
      */
-    public record SoloTasksResponse(boolean locked, int points, int unlockPoints, List<SoloTaskItem> tasks) {
+    public record SoloTasksResponse(boolean locked, int points, int unlockPoints, List<SoloTaskItem> tasks, String emptyReason) {
     }
 
     public record AdminSoloSubmissionRow(
