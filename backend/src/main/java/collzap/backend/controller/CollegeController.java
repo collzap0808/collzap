@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import collzap.backend.dto.CollegeDtos.CollegeResponse;
@@ -29,6 +30,15 @@ public class CollegeController {
     @GetMapping
     public List<CollegeResponse> list() {
         return collegeService.listAll();
+    }
+
+    /** Type-ahead for the college picker: name, city or domain, every word must match. */
+    @GetMapping("/search")
+    public List<CollegeResponse> search(
+        @RequestParam(defaultValue = "") String q,
+        @RequestParam(defaultValue = "20") int limit
+    ) {
+        return collegeService.search(q, limit);
     }
 
     @GetMapping("/{collegeId}")

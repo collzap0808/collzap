@@ -1,28 +1,36 @@
 import { useState, useEffect } from 'react';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Search, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import EmptyState from '../../components/ui/EmptyState';
 import Spinner from '../../components/ui/Spinner';
-import { useCollegeStore } from '../../store/useCollegeStore';
+import Pagination from '../../components/ui/Pagination';
 import { useAdminStore } from '../../store/useAdminStore';
 import AdminPageHeader from './AdminPageHeader';
 
 const EMPTY_FORM = { name: '', emailDomain: '', city: '' };
 
 export default function AdminCollegesPage() {
-  const { colleges, fetchColleges, loading: fetchLoading } = useCollegeStore();
-  const { createCollege, updateCollege, deleteCollege, loading: mutating } = useAdminStore();
+  const { adminColleges, fetchAdminColleges, createCollege, updateCollege, deleteCollege, loading } = useAdminStore();
+  const [search, setSearch] = useState('');
+  const [page, setPage] = useState(0);
+  const [saving, setSaving] = useState(false);
 
   const [modalOpen, setModalOpen] = useState(false);
   const [editingCollege, setEditingCollege] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
 
+  // Search and page both go to the server; typing is debounced.
   useEffect(() => {
-    fetchColleges().catch(console.error);
-  }, []);
+    const t = setTimeout(() => {
+      fetchAdminColleges(search.trim() || null, page).catch(console.error);
+    }, search ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [search, page, fetchAdminColleges]);
+
+  const fetchColleges = () => fetchAdminColleges(search.trim() || null, page).catch(console.error);
 
   const handleOpenModal = (college = null) => {
     if (college) {
@@ -42,6 +50,7 @@ export default function AdminCollegesPage() {
       return;
     }
 
+    setSaving(true);
     try {
       // city is optional on the backend; send it only when filled.
       if (editingCollege) {
@@ -66,6 +75,8 @@ export default function AdminCollegesPage() {
       fetchColleges();
     } catch (error) {
       toast.error(error.message || 'Could not save that');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -80,18 +91,30 @@ export default function AdminCollegesPage() {
     }
   };
 
-  const rows = colleges || [];
+  const rows = adminColleges?.content || [];
 
   return (
     <div>
-      <AdminPageHeader title="Colleges" count={rows.length}>
+      <AdminPageHeader title="Colleges" count={adminColleges?.totalElements}>
         <Button size="sm" onClick={() => handleOpenModal()}>Add college</Button>
       </AdminPageHeader>
 
-      {fetchLoading && rows.length === 0 ? (
+      <div className="mb-5 max-w-md">
+        <Input
+          aria-label="Search colleges"
+          placeholder="Search by name, city or email domain"
+          icon={<Search className="h-4 w-4" aria-hidden="true" />}
+          value={search}
+          onChange={(e) => { setSearch(e.target.value); setPage(0); }}
+        />
+      </div>
+
+      {loading && rows.length === 0 ? (
         <div className="flex justify-center py-20 text-accent-500"><Spinner size="lg" /></div>
       ) : rows.length === 0 ? (
-        <EmptyState title="No colleges yet" description="Add one so its students can sign up." />
+        search.trim()
+          ? <EmptyState title="No matches" description={`No college matches "${search.trim()}".`} />
+          : <EmptyState title="No colleges yet" description="Add one so its students can sign up." />
       ) : (
         <>
           <div className="hidden overflow-x-auto rounded-lg border border-line sm:block">
@@ -172,6 +195,13 @@ export default function AdminCollegesPage() {
               </li>
             ))}
           </ul>
+
+          <Pagination
+            page={adminColleges?.page ?? page}
+            totalPages={adminColleges?.totalPages ?? 0}
+            onPageChange={setPage}
+            className="mt-2"
+          />
         </>
       )}
 
@@ -197,7 +227,7 @@ export default function AdminCollegesPage() {
           />
           <div className="flex justify-end gap-3 pt-3">
             <Button variant="ghost" type="button" onClick={() => setModalOpen(false)}>Cancel</Button>
-            <Button type="submit" loading={mutating}>{editingCollege ? 'Save' : 'Add'}</Button>
+            <Button type="submit" loading={saving}>{editingCollege ? 'Save' : 'Add'}</Button>
           </div>
         </form>
       </Modal>

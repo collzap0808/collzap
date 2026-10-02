@@ -183,6 +183,14 @@ public class AdminController {
      * Registers a college and its email domain. Signup keys off the domain, so this
      * is what lets a new campus in.
      */
+    /** Every college, searchable by name, city or domain, paginated. */
+    @GetMapping("/colleges")
+    public PageResponse<CollegeResponse> colleges(
+            @RequestParam(required = false) String q,
+            @PageableDefault(size = 25) Pageable pageable) {
+        return collegeService.adminPage(q, pageable);
+    }
+
     @PostMapping("/colleges")
     public ResponseEntity<CollegeResponse> createCollege(@Valid @RequestBody CreateCollegeRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(collegeService.create(request));
