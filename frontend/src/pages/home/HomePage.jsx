@@ -50,8 +50,8 @@ export default function HomePage() {
     // Asked for separately from the calendar card: paging that card back a
     // month must not make today's task look undone.
     api.get('/me/task-stats/calendar', { params: { month: today.slice(0, 7) } })
-      .then((r) => setSubmittedToday(!!r?.days?.some((d) => d.date === today && d.submissions > 0)))
-      .catch(() => {});
+        .then((r) => setSubmittedToday(!!r?.days?.some((d) => d.date === today && d.submissions > 0)))
+        .catch(() => {});
   }, []);
 
   const hasLongTerm = projectTypes.has('LONG_TERM');
@@ -59,8 +59,8 @@ export default function HomePage() {
 
   const handleAddLongTerm = async () => {
     if (!window.confirm(
-      "Set up long-term matching? This can only be done once — the interests, the assessment, " +
-      "and the format you pick can't be changed afterward."
+        "Set up long-term matching? This can only be done once — the interests, the assessment, " +
+        "and the format you pick can't be changed afterward."
     )) {
       return;
     }
@@ -93,8 +93,8 @@ export default function HomePage() {
 
   const people = useMemo(() => peopleFromConnections(connections), [connections]);
   const peersOnGoal = currentShortTerm
-    ? people.filter((p) => p.interests.includes(currentShortTerm.interestName)).length
-    : 0;
+      ? people.filter((p) => p.interests.includes(currentShortTerm.interestName)).length
+      : 0;
 
   const todo = continueItems({
     chats, connections, waiting, featuredSession: featured, submittedToday, streak,
@@ -108,81 +108,81 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="space-y-8">
-      {/* Welcome + the one primary action */}
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tightest text-ink sm:text-4xl">
-            {greeting()}{firstName ? `, ${firstName}` : ''}
-          </h1>
-          <p className="mt-1.5 text-sm text-mute">Here&rsquo;s what&rsquo;s happening with your campus network.</p>
-        </div>
-        {matchingLocked ? (
-          <Button
-            variant="gradient"
-            onClick={() => {
-              if (openNextTask()) return;
-              toast(soloEmptyMessage(soloEmptyReason ?? (profile?.verificationStatus === 'APPROVED' ? null : 'NOT_VERIFIED')));
-              document.getElementById('daily-tasks')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }}
-            icon={<ClipboardCheck className="h-4 w-4" />}
-            className="shrink-0"
-          >
-            Today&rsquo;s tasks
-          </Button>
-        ) : (
-          <Button
-            variant="gradient"
-            onClick={() => navigate('/matches')}
-            icon={<UserPlus className="h-4 w-4" />}
-            className="shrink-0"
-          >
-            Find people
-          </Button>
-        )}
-      </header>
+      <div className="space-y-8">
+        {/* Welcome + the one primary action */}
+        <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="font-display text-3xl font-extrabold leading-tight tracking-tightest text-ink sm:text-4xl">
+              {greeting()}{firstName ? `, ${firstName}` : ''}
+            </h1>
+            <p className="mt-1.5 text-sm text-mute">Here&rsquo;s what&rsquo;s happening with your campus network.</p>
+          </div>
+          {matchingLocked ? (
+              <Button
+                  variant="gradient"
+                  onClick={() => {
+                    if (openNextTask()) return;
+                    toast(soloEmptyMessage(soloEmptyReason ?? (profile?.verificationStatus === 'APPROVED' ? null : 'NOT_VERIFIED')));
+                    document.getElementById('daily-tasks')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  }}
+                  icon={<ClipboardCheck className="h-4 w-4" />}
+                  className="shrink-0"
+              >
+                Today&rsquo;s tasks
+              </Button>
+          ) : (
+              <Button
+                  variant="gradient"
+                  onClick={() => navigate('/matches')}
+                  icon={<UserPlus className="h-4 w-4" />}
+                  className="shrink-0"
+              >
+                Find people
+              </Button>
+          )}
+        </header>
 
-      {/* Below desktop the rail drops under everything else, which would bury
+        {/* Below desktop the rail drops under everything else, which would bury
           the tracker — so on phones and tablets it leads the page instead. */}
-      {/* While matching is locked the daily-tasks card leads instead (it carries
+        {/* While matching is locked the daily-tasks card leads instead (it carries
           its own progress bar), and the tracker moves down to the rail. */}
-      {!matchingLocked && (
-        <div className="lg:hidden">
-          <ProgressCard stats={myStats} />
-        </div>
-      )}
+        {!matchingLocked && (
+            <div className="lg:hidden">
+              <ProgressCard stats={myStats} />
+            </div>
+        )}
 
-      {/* The work on the left; your own progress and month on the right, so
+        {/* The work on the left; your own progress and month on the right, so
           the rail fills the height the lists leave instead of a bottom row. */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_21rem]">
-        <div className="min-w-0 space-y-8">
-          {matchingLocked && <SoloTasksSection verified={profile?.verificationStatus === 'APPROVED'} />}
-          <OverviewRow items={overview} />
-          <UpcomingEvents events={events} loading={!sessions && sessionsLoading} />
-          <div className="grid grid-cols-1 gap-8 xl:grid-cols-2 xl:gap-5">
-            <PeopleSection people={people} onFind={() => navigate('/matches')} />
-            <ContinueSection items={todo} />
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] xl:grid-cols-[minmax(0,1fr)_21rem]">
+          <div className="min-w-0 space-y-8">
+            {matchingLocked && <SoloTasksSection verified={profile?.verificationStatus === 'APPROVED'} />}
+            <OverviewRow items={overview} />
+            <UpcomingEvents events={events} loading={!sessions && sessionsLoading} />
+            <div className="grid grid-cols-1 gap-8 xl:grid-cols-2 xl:gap-5">
+              <PeopleSection people={people} onFind={() => navigate('/matches')} />
+              <ContinueSection items={todo} />
+            </div>
+            <GoalStrip
+                shortTerm={currentShortTerm}
+                peersOnIt={peersOnGoal}
+                hasLongTerm={hasLongTerm}
+                onChange={() => setShortTermModalOpen(true)}
+                onSetUpLongTerm={handleAddLongTerm}
+                settingUp={addingLongTerm}
+            />
           </div>
-          <GoalStrip
-            shortTerm={currentShortTerm}
-            peersOnIt={peersOnGoal}
-            hasLongTerm={hasLongTerm}
-            onChange={() => setShortTermModalOpen(true)}
-            onSetUpLongTerm={handleAddLongTerm}
-            settingUp={addingLongTerm}
-          />
+
+          <aside className="min-w-0 space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0 lg:block lg:space-y-4" aria-label="Your progress">
+            <div className={matchingLocked ? undefined : 'hidden lg:block'}>
+              <ProgressCard stats={myStats} />
+            </div>
+            <TaskCalendar className="max-w-none" />
+            <ComingSoon points={myStats?.totalPoints ?? 0} hideCertification />
+          </aside>
         </div>
 
-        <aside className="min-w-0 space-y-4 sm:grid sm:grid-cols-2 sm:gap-4 sm:space-y-0 lg:block lg:space-y-4" aria-label="Your progress">
-          <div className={matchingLocked ? undefined : 'hidden lg:block'}>
-            <ProgressCard stats={myStats} />
-          </div>
-          <TaskCalendar className="max-w-none" />
-          <ComingSoon points={myStats?.totalPoints ?? 0} />
-        </aside>
+        <ShortTermInterestModal open={shortTermModalOpen} onClose={() => setShortTermModalOpen(false)} />
       </div>
-
-      <ShortTermInterestModal open={shortTermModalOpen} onClose={() => setShortTermModalOpen(false)} />
-    </div>
   );
 }

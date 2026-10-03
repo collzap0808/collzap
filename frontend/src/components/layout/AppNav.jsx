@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
-import { Bell, LayoutGrid, MessageSquare, PlayCircle, User, Users } from 'lucide-react';
+import { Award, Bell, LayoutGrid, MessageSquare, PlayCircle, User, Users } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { snappy, transition, useReducedMotion } from '../../lib/motion';
 import { LogoMark } from '../brand/Logo';
@@ -33,6 +33,7 @@ const NAV = [
   { name: 'Matches', href: '/matches', icon: Users, note: 'people, queued and found' },
   { name: 'Chat', href: '/chat', icon: MessageSquare, note: 'open threads' },
   { name: 'Sessions', href: '/sessions', icon: PlayCircle, note: 'mentor talks for your interests' },
+  { name: 'Certificates', href: '/certificates', icon: Award, note: 'your earned certificates' },
   { name: 'Profile', href: '/profile', icon: User, note: 'what others see' },
 ];
 
