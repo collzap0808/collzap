@@ -27,23 +27,29 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     @Query(
         value = """
             select u from User u
-            left join fetch u.college
+            left join fetch u.college c
             where (:accountStatus is null or u.accountStatus = :accountStatus)
+              and (:verificationStatus is null or u.verificationStatus = :verificationStatus)
               and (:search is null or :search = ''
                    or lower(u.name) like lower(concat('%', :search, '%'))
-                   or lower(u.email) like lower(concat('%', :search, '%')))
+                   or lower(u.email) like lower(concat('%', :search, '%'))
+                   or lower(c.name) like lower(concat('%', :search, '%')))
             order by u.createdAt desc
             """,
         countQuery = """
             select count(u) from User u
+            left join u.college c
             where (:accountStatus is null or u.accountStatus = :accountStatus)
+              and (:verificationStatus is null or u.verificationStatus = :verificationStatus)
               and (:search is null or :search = ''
                    or lower(u.name) like lower(concat('%', :search, '%'))
-                   or lower(u.email) like lower(concat('%', :search, '%')))
+                   or lower(u.email) like lower(concat('%', :search, '%'))
+                   or lower(c.name) like lower(concat('%', :search, '%')))
             """
     )
     Page<User> searchActive(
         @Param("accountStatus") Status accountStatus,
+        @Param("verificationStatus") VerificationStatus verificationStatus,
         @Param("search") String search,
         Pageable pageable
     );

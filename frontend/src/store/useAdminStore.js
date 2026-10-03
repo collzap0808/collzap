@@ -34,13 +34,14 @@ export const useAdminStore = create((set) => ({
     }
   },
 
-  fetchUsers: async (search = null, status = null, page = 0) => {
+  fetchUsers: async (search = null, status = null, page = 0, verificationStatus = null) => {
     set({ loading: true, error: null });
     try {
       const params = new URLSearchParams({ page });
       if (search) params.append('search', search);
       if (status) params.append('status', status);
-      
+      if (verificationStatus) params.append('verificationStatus', verificationStatus);
+
       const users = await api.get(`/admin/users?${params.toString()}`);
       set({ users, loading: false });
       return users;

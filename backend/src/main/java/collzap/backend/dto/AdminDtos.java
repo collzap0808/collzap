@@ -53,6 +53,26 @@ public final class AdminDtos {
     ) {
     }
 
+    /**
+     * The "View" modal's payload: the same profile {@code /api/me} returns, plus
+     * task points/streak and per-interest seriousness level — none of which
+     * otherwise lives anywhere an operator can see it, since exposing a user's
+     * own points to other users would cut against the product's deliberately
+     * non-competitive, no-leaderboard stance.
+     */
+    public record AdminUserDetailResponse(
+        UserDtos.UserResponse user,
+        int totalPoints,
+        int currentStreakDays,
+        int longestStreakDays,
+        List<SeriousnessLevelEntry> seriousnessLevels
+    ) {
+    }
+
+    /** One interest's current seriousness standing — a user can hold one per long-term interest. */
+    public record SeriousnessLevelEntry(String interestName, SeriousnessLevel level) {
+    }
+
     public record PendingVerificationRow(
         UUID documentId,
         UUID userId,

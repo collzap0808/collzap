@@ -20,6 +20,7 @@ import collzap.backend.dto.AdminDtos.AdminMatchRow;
 import collzap.backend.dto.AdminDtos.AdminQueueRow;
 import collzap.backend.dto.AdminDtos.AdminReportRow;
 import collzap.backend.dto.AdminDtos.AdminStatsResponse;
+import collzap.backend.dto.AdminDtos.AdminUserDetailResponse;
 import collzap.backend.dto.AdminDtos.AdminUserRow;
 import collzap.backend.dto.AdminDtos.CreateMatchRequest;
 import collzap.backend.dto.AdminDtos.InterestFeedbackRow;
@@ -33,9 +34,9 @@ import collzap.backend.dto.CollegeDtos.VerificationDocumentResponse;
 import collzap.backend.dto.CommonDtos.MessageResponse;
 import collzap.backend.dto.CommonDtos.PageResponse;
 import collzap.backend.dto.MatchDtos.MatchGroupResponse;
-import collzap.backend.dto.UserDtos.UserResponse;
 import collzap.backend.enums.MatchGroupStatus;
 import collzap.backend.enums.Status;
+import collzap.backend.enums.VerificationStatus;
 import collzap.backend.security.AuthPrincipal;
 import collzap.backend.service.AdminService;
 import collzap.backend.service.CollegeService;
@@ -81,20 +82,23 @@ public class AdminController {
     }
 
     /**
-     * The all-users table. {@code search} matches name or email; {@code status}
-     * defaults to active accounts but accepts DELETED so support can look up a
-     * closed account.
+     * The all-users table. {@code search} matches name, email, or college name;
+     * {@code status} defaults to active accounts but accepts DELETED so support
+     * can look up a closed account. {@code verificationStatus} narrows it
+     * further, independently of {@code status}.
      */
     @GetMapping("/users")
     public PageResponse<AdminUserRow> users(
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Status status,
+            @RequestParam(required = false) VerificationStatus verificationStatus,
             @PageableDefault(size = 25) Pageable pageable) {
-        return adminService.users(search, status, pageable);
+        return adminService.users(search, status, verificationStatus, pageable);
     }
 
+    /** The full profile plus task points/streak — the latter lives nowhere else an operator can see it. */
     @GetMapping("/users/{userId}")
-    public UserResponse user(@PathVariable UUID userId) {
+    public AdminUserDetailResponse user(@PathVariable UUID userId) {
         return adminService.user(userId);
     }
 

@@ -28,7 +28,6 @@ import collzap.backend.dto.CollegeDtos.ReviewDocumentRequest;
 import collzap.backend.dto.CollegeDtos.VerificationDocumentResponse;
 import collzap.backend.dto.CommonDtos.PageResponse;
 import collzap.backend.dto.MatchDtos.MatchGroupResponse;
-import collzap.backend.dto.UserDtos.UserResponse;
 import collzap.backend.enums.DocumentStatus;
 import collzap.backend.enums.MatchGroupStatus;
 import collzap.backend.enums.Status;
@@ -84,6 +83,8 @@ public class AdminService {
     private final SeriousnessTestAttemptRepository attemptRepository;
     private final UserInterestSelectionRepository userInterestSelectionRepository;
     private final CollegeApplicationService collegeApplicationService;
+    private final collzap.backend.repositories.UserTaskStatsRepository userTaskStatsRepository;
+    private final SeriousnessLevelLookup seriousnessLevelLookup;
 
     public AdminService(
         UserRepository userRepository,
@@ -103,7 +104,9 @@ public class AdminService {
         collzap.backend.repositories.SeriousnessTestAnswerRepository answerRepository,
         SeriousnessTestAttemptRepository attemptRepository,
         UserInterestSelectionRepository userInterestSelectionRepository,
-        CollegeApplicationService collegeApplicationService
+        CollegeApplicationService collegeApplicationService,
+        collzap.backend.repositories.UserTaskStatsRepository userTaskStatsRepository,
+        SeriousnessLevelLookup seriousnessLevelLookup
     ) {
         this.userRepository = userRepository;
         this.userService = userService;
@@ -123,6 +126,8 @@ public class AdminService {
         this.attemptRepository = attemptRepository;
         this.userInterestSelectionRepository = userInterestSelectionRepository;
         this.collegeApplicationService = collegeApplicationService;
+        this.userTaskStatsRepository = userTaskStatsRepository;
+        this.seriousnessLevelLookup = seriousnessLevelLookup;
     }
 
     @Transactional(readOnly = true)
@@ -139,10 +144,12 @@ public class AdminService {
 
     /** The all-users table. {@code status} defaults to active accounts. */
     @Transactional(readOnly = true)
-    public PageResponse<AdminUserRow> users(String search, Status status, Pageable pageable) {
+    public PageResponse<AdminUserRow> users(
+        String search, Status status, VerificationStatus verificationStatus, Pageable pageable
+    ) {
         String needle = search == null || search.isBlank() ? null : search.trim();
         return PageResponse.from(
-            userRepository.searchActive(status, needle, pageable),
+            userRepository.searchActive(status, verificationStatus, needle, pageable),
             user -> new AdminUserRow(
                 user.getId(),
                 user.getName(),
@@ -157,10 +164,23 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
-    public UserResponse user(UUID userId) {
+    public collzap.backend.dto.AdminDtos.AdminUserDetailResponse user(UUID userId) {
         User user = userRepository.findWithCollegeById(userId)
             .orElseThrow(() -> new NotFoundException("User not found"));
-        return UserService.toResponse(user);
+        var stats = userTaskStatsRepository.findByUserId(userId).orElse(null);
+        var seriousnessLevels = seriousnessLevelLookup.latestByInterest(userId).values().stream()
+            .filter(attempt -> attempt.getLevel() != null)
+            .map(attempt -> new collzap.backend.dto.AdminDtos.SeriousnessLevelEntry(
+                attempt.getInterest().getName(), attempt.getLevel()
+            ))
+            .toList();
+        return new collzap.backend.dto.AdminDtos.AdminUserDetailResponse(
+            UserService.toResponse(user),
+            stats == null ? 0 : stats.getTotalPoints(),
+            stats == null ? 0 : stats.getCurrentStreakDays(),
+            stats == null ? 0 : stats.getLongestStreakDays(),
+            seriousnessLevels
+        );
     }
 
     /**

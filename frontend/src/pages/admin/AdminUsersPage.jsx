@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Search, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Search, ExternalLink, AlertTriangle, Trophy, Flame } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Input from '../../components/ui/Input';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import Modal from '../../components/ui/Modal';
 import Tabs from '../../components/ui/Tabs';
+import Select from '../../components/ui/Select';
 import Spinner from '../../components/ui/Spinner';
 import Pagination from '../../components/ui/Pagination';
 import TextArea from '../../components/ui/TextArea';
@@ -21,10 +22,30 @@ const verificationBadge = (status) => {
   }
 };
 
+// Mirrors verificationBadge's own labels, so the filter options read the
+// same as the badges they're filtering by.
+const VERIFICATION_OPTIONS = [
+  { value: '', label: 'Any verification' },
+  { value: 'APPROVED', label: 'Verified' },
+  { value: 'DOCUMENT_SUBMITTED', label: 'In review' },
+  { value: 'PENDING', label: 'Unverified' },
+  { value: 'REJECTED', label: 'Rejected' },
+];
+
+// Title-cased labels for SeriousnessLevel — the enum values themselves are
+// shouting (BEGINNER, LEARNING, ...).
+const LEVEL_LABEL = {
+  BEGINNER: 'Beginner',
+  LEARNING: 'Learning',
+  INTERMEDIATE: 'Intermediate',
+  EXPERT: 'Expert',
+};
+
 export default function AdminUsersPage() {
   const { users, fetchUsers, fetchUser, deleteUser, loading } = useAdminStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeTab, setActiveTab] = useState('ALL');
+  const [verificationFilter, setVerificationFilter] = useState('');
   const [page, setPage] = useState(0);
   const [selectedUser, setSelectedUser] = useState(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
@@ -34,15 +55,16 @@ export default function AdminUsersPage() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
 
-  // Search/status/page all go to the server — the store already supports it.
+  // Search/status/verification/page all go to the server — college is
+  // covered by the search box itself (it matches name, email, or college).
   // Filter changes reset the page inline so this stays a single fetch.
   useEffect(() => {
     const status = activeTab === 'ALL' ? null : activeTab;
     const handle = setTimeout(() => {
-      fetchUsers(searchTerm || null, status, page).catch(console.error);
+      fetchUsers(searchTerm || null, status, page, verificationFilter || null).catch(console.error);
     }, searchTerm ? 300 : 0); // debounce typing only
     return () => clearTimeout(handle);
-  }, [searchTerm, activeTab, page]);
+  }, [searchTerm, activeTab, verificationFilter, page]);
 
   const changeFilter = (fn) => { setPage(0); fn(); };
 
@@ -50,8 +72,19 @@ export default function AdminUsersPage() {
     setSelectedUser(user);
     setLoadingDetail(true);
     try {
+      // The detail endpoint wraps the profile with task points/streak and
+      // per-interest seriousness level — flatten it here so the rest of the
+      // component just reads one object.
       const full = await fetchUser(user.id);
-      if (full) setSelectedUser(full);
+      if (full) {
+        setSelectedUser({
+          ...full.user,
+          totalPoints: full.totalPoints,
+          currentStreakDays: full.currentStreakDays,
+          longestStreakDays: full.longestStreakDays,
+          seriousnessLevels: full.seriousnessLevels || [],
+        });
+      }
     } catch (error) {
       console.error('Failed to fetch user detail', error);
     } finally {
@@ -79,7 +112,7 @@ export default function AdminUsersPage() {
       setDeleteModalOpen(false);
       setSelectedUser(null);
       const status = activeTab === 'ALL' ? null : activeTab;
-      fetchUsers(searchTerm || null, status, page);
+      fetchUsers(searchTerm || null, status, page, verificationFilter || null);
     } catch (error) {
       toast.error(error.message || 'Could not delete that user');
     } finally {
@@ -111,8 +144,28 @@ export default function AdminUsersPage() {
         ]}
         active={activeTab}
         onChange={(key) => changeFilter(() => setActiveTab(key))}
-        className="mb-6"
+        className="mb-4"
       />
+
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+        <div className="w-full sm:w-52">
+          <Select
+            aria-label="Filter by verification"
+            value={verificationFilter}
+            onChange={(e) => changeFilter(() => setVerificationFilter(e.target.value))}
+            options={VERIFICATION_OPTIONS}
+          />
+        </div>
+        {verificationFilter && (
+          <button
+            type="button"
+            onClick={() => changeFilter(() => setVerificationFilter(''))}
+            className="text-xs text-accent-700 underline decoration-accent-300 underline-offset-4 hover:text-accent-800 sm:ml-1"
+          >
+            Clear filters
+          </button>
+        )}
+      </div>
 
       {/* Five columns of ops detail do not survive a phone. Below md the same
           rows become stacked cards; the table returns when there is width for
@@ -242,6 +295,25 @@ export default function AdminUsersPage() {
                 </Badge>
                 {selectedUser.profileCompleted && <Badge variant="success">Profile done</Badge>}
               </div>
+
+              {!loadingDetail && selectedUser.totalPoints !== undefined && (
+                <div className="mt-4 flex flex-wrap items-center gap-4 text-mute">
+                  <span className="inline-flex items-center gap-1.5 text-sm">
+                    <Trophy className="h-3.5 w-3.5 text-accent-600" aria-hidden="true" />
+                    <span className="font-medium text-ink tnum">{selectedUser.totalPoints}</span> pts
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-sm">
+                    <Flame className="h-3.5 w-3.5 text-bad" aria-hidden="true" />
+                    <span className="font-medium text-ink tnum">{selectedUser.currentStreakDays}</span>
+                    -day streak
+                  </span>
+                  {selectedUser.seriousnessLevels?.map((l) => (
+                    <Badge key={l.interestName} variant="primary">
+                      {l.interestName}: {LEVEL_LABEL[l.level] || l.level}
+                    </Badge>
+                  ))}
+                </div>
+              )}
             </div>
 
             {loadingDetail && <div className="text-accent-500"><Spinner size="sm" /></div>}
