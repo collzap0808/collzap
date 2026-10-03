@@ -22,6 +22,7 @@ public class CollzapProperties {
     private Matching matching = new Matching();
     private Cors cors = new Cors();
     private Cloudinary cloudinary = new Cloudinary();
+    private Analytics analytics = new Analytics();
 
     @Getter
     @Setter
@@ -115,5 +116,18 @@ public class CollzapProperties {
         private String cloudName = "";
         private String apiKey = "";
         private String apiSecret = "";
+    }
+
+    @Getter
+    @Setter
+    public static class Analytics {
+        /** Numeric GA4 property ID (Admin, Property settings), not the G-XXXX measurement ID. */
+        private String propertyId = "";
+        /**
+         * Base64 of the service-account JSON key that has Viewer access on the
+         * property. When either value is blank the admin Analytics page says
+         * "not configured" instead of failing.
+         */
+        private String credentialsBase64 = "";
     }
 }

@@ -173,4 +173,22 @@ public final class AdminDtos {
         String interestName
     ) {
     }
+
+    /** One day of landing-page traffic from Google Analytics; {@code date} is yyyy-MM-dd. */
+    public record LandingVisitDay(String date, long visitors, long newVisitors, long pageViews) {
+    }
+
+    /**
+     * {@code visitors} in the totals is unique across the whole range, so it is
+     * lower than the sum of the daily figures when people come back.
+     */
+    public record LandingAnalyticsResponse(
+        boolean configured,
+        int days,
+        long visitors,
+        long newVisitors,
+        long pageViews,
+        List<LandingVisitDay> daily
+    ) {
+    }
 }
