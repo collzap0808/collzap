@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import toast from 'react-hot-toast';
 import Button from '../../../components/ui/Button';
 import Input from '../../../components/ui/Input';
-import Select from '../../../components/ui/Select';
 import FileUpload from '../../../components/ui/FileUpload';
 import OtpDigitGrid from '../../../components/auth/OtpDigitGrid';
 import StepHeader from './StepHeader';
 import { useModerationStore } from '../../../store/useModerationStore';
-import { useCollegeStore } from '../../../store/useCollegeStore';
+import CollegePicker from '../../../components/ui/CollegePicker';
 import { useUserStore } from '../../../store/useUserStore';
 import { cn } from '../../../lib/utils';
 import { snappy, useReducedMotion, transition } from '../../../lib/motion';
@@ -68,16 +67,11 @@ export default function UploadDocumentStep() {
 function DocumentPath() {
   const [documentType, setDocumentType] = useState('FEE_SLIP');
   const [documentUrl, setDocumentUrl] = useState('');
-  const [collegeId, setCollegeId] = useState('');
+  const [college, setCollege] = useState(null);
+  const collegeId = college?.id || '';
   const reduced = useReducedMotion();
 
   const { uploadDocument, loading } = useModerationStore();
-  const { colleges, fetchColleges } = useCollegeStore();
-
-  useEffect(() => {
-    fetchColleges().catch(console.error);
-  }, []);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!collegeId) {
@@ -101,13 +95,7 @@ function DocumentPath() {
   return (
     <form onSubmit={handleSubmit} className="max-w-lg space-y-8">
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-ink">Your college</label>
-        <Select value={collegeId} onChange={(e) => setCollegeId(e.target.value)}>
-          <option value="" disabled>Select your college</option>
-          {colleges.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </Select>
+        <CollegePicker value={college} onChange={setCollege} />
         <Link
           to="/bring-collzap"
           className="mt-1.5 inline-block text-xs text-mute underline decoration-line underline-offset-4 hover:text-accent-700"

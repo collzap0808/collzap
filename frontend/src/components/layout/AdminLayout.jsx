@@ -10,6 +10,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 
 const navigation = [
   { name: 'Overview', href: '/admin' },
+  { name: 'Analytics', href: '/admin/analytics' },
   { name: 'Users', href: '/admin/users' },
   { name: 'Verifications', href: '/admin/verifications' },
   { name: 'Task reviews', href: '/admin/task-reviews' },

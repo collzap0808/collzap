@@ -11,6 +11,7 @@ export const useAdminStore = create((set) => ({
   queue: [],
   reports: defaultPage,
   collegeApplications: defaultPage,
+  adminColleges: defaultPage,
   interestFeedback: defaultPage,
   questions: defaultPage,
   interests: [],
@@ -198,6 +199,21 @@ export const useAdminStore = create((set) => ({
       const interestFeedback = await api.get(`/admin/interest-feedback?page=${page}`);
       set({ interestFeedback, loading: false });
       return interestFeedback;
+    } catch (error) {
+      set({ error: error.message, loading: false });
+      throw error;
+    }
+  },
+
+  // Every college (active or not), searched by name / city / domain, one page at a time.
+  fetchAdminColleges: async (q = null, page = 0, size = 25) => {
+    set({ loading: true, error: null });
+    try {
+      const params = new URLSearchParams({ page: String(page), size: String(size) });
+      if (q) params.set('q', q);
+      const adminColleges = await api.get(`/admin/colleges?${params.toString()}`);
+      set({ adminColleges, loading: false });
+      return adminColleges;
     } catch (error) {
       set({ error: error.message, loading: false });
       throw error;

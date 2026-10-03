@@ -73,6 +73,7 @@ const AdminSoloReviewsPage = lazy(() => import('./pages/admin/AdminSoloReviewsPa
 const AdminCertificatesPage = lazy(() => import('./pages/admin/AdminCertificatesPage'));
 const AdminCertificateClaimsPage = lazy(() => import('./pages/admin/AdminCertificateClaimsPage'));
 const AdminAllCertificateClaimsPage = lazy(() => import('./pages/admin/AdminCertificateClaimsPage.jsx'));
+const AdminAnalyticsPage = lazy(() => import('./pages/admin/AdminAnalyticsPage'));
 
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
@@ -231,6 +232,27 @@ function App() {
                   {/* Global claims: every download across every certificate */}
                   <Route path="/admin/certificate-claims" element={<AdminAllCertificateClaimsPage />} />
                 </Route>
+          </Route>
+
+          {/* Admin Routes */}
+          <Route element={<AuthGuard />}>
+            <Route element={<AdminGuard />}>
+              <Route element={<AdminLayout />}>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/admin/users" element={<AdminUsersPage />} />
+                <Route path="/admin/verifications" element={<AdminVerificationsPage />} />
+                <Route path="/admin/applications" element={<AdminApplicationsPage />} />
+                <Route path="/admin/matches" element={<AdminMatchesPage />} />
+                <Route path="/admin/queue" element={<AdminQueuePage />} />
+                <Route path="/admin/reports" element={<AdminReportsPage />} />
+                <Route path="/admin/feedback" element={<AdminFeedbackPage />} />
+                <Route path="/admin/colleges" element={<AdminCollegesPage />} />
+                <Route path="/admin/interests" element={<AdminInterestsPage />} />
+                <Route path="/admin/questions" element={<AdminQuestionsPage />} />
+                <Route path="/admin/task-banks" element={<AdminTaskBanksPage />} />
+                <Route path="/admin/sessions" element={<AdminSessionsPage />} />
+                <Route path="/admin/task-reviews" element={<AdminSoloReviewsPage />} />
+                <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
               </Route>
             </Route>
 

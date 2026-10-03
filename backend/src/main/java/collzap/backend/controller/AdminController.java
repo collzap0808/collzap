@@ -23,6 +23,7 @@ import collzap.backend.dto.AdminDtos.AdminStatsResponse;
 import collzap.backend.dto.AdminDtos.AdminUserRow;
 import collzap.backend.dto.AdminDtos.CreateMatchRequest;
 import collzap.backend.dto.AdminDtos.InterestFeedbackRow;
+import collzap.backend.dto.AdminDtos.LandingAnalyticsResponse;
 import collzap.backend.dto.AdminDtos.PendingVerificationRow;
 import collzap.backend.dto.AdminDtos.UnmatchRequest;
 import collzap.backend.dto.CollegeDtos.CollegeResponse;
@@ -38,6 +39,7 @@ import collzap.backend.enums.Status;
 import collzap.backend.security.AuthPrincipal;
 import collzap.backend.service.AdminService;
 import collzap.backend.service.CollegeService;
+import collzap.backend.service.LandingAnalyticsService;
 import jakarta.validation.Valid;
 
 /**
@@ -57,16 +59,25 @@ public class AdminController {
 
     private final AdminService adminService;
     private final CollegeService collegeService;
+    private final LandingAnalyticsService landingAnalyticsService;
 
-    public AdminController(AdminService adminService, CollegeService collegeService) {
+    public AdminController(AdminService adminService, CollegeService collegeService,
+            LandingAnalyticsService landingAnalyticsService) {
         this.adminService = adminService;
         this.collegeService = collegeService;
+        this.landingAnalyticsService = landingAnalyticsService;
     }
 
     /** Dashboard tiles. */
     @GetMapping("/stats")
     public AdminStatsResponse stats() {
         return adminService.stats();
+    }
+
+    /** Landing-page visitors per day from Google Analytics, for the last {@code days} days. */
+    @GetMapping("/analytics/landing")
+    public LandingAnalyticsResponse landingAnalytics(@RequestParam(defaultValue = "30") int days) {
+        return landingAnalyticsService.landingVisits(days);
     }
 
     /**
@@ -183,6 +194,14 @@ public class AdminController {
      * Registers a college and its email domain. Signup keys off the domain, so this
      * is what lets a new campus in.
      */
+    /** Every college, searchable by name, city or domain, paginated. */
+    @GetMapping("/colleges")
+    public PageResponse<CollegeResponse> colleges(
+            @RequestParam(required = false) String q,
+            @PageableDefault(size = 25) Pageable pageable) {
+        return collegeService.adminPage(q, pageable);
+    }
+
     @PostMapping("/colleges")
     public ResponseEntity<CollegeResponse> createCollege(@Valid @RequestBody CreateCollegeRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(collegeService.create(request));

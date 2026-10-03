@@ -8,11 +8,11 @@ const NEEDS = [
   'Need Project Teammates',
   'Need Startup Partners',
   'Need A Serious Study Group',
-  'Looking for startup co-founder',
-  'Want a serious study group',
   'Need coding partners',
   'Looking for creators & designers',
   'Want meaningful friendships',
+  "Need Hackathon Teammates",
+  "Looking for Opportunities"
 ];
 
 // Fixed tilts rather than random ones: the board must look identical on every

@@ -69,6 +69,7 @@ public class UserService {
     private final UserProjectTypeSelectionRepository projectTypeSelectionRepository;
     private final BlockReportRepository blockReportRepository;
     private final OtpCodeRepository otpCodeRepository;
+    private final TaskDataPurger taskDataPurger;
 
     public UserService(
         UserRepository userRepository,
@@ -89,8 +90,10 @@ public class UserService {
         ConnectionTypeSelectionRepository connectionTypeSelectionRepository,
         UserProjectTypeSelectionRepository projectTypeSelectionRepository,
         BlockReportRepository blockReportRepository,
-        OtpCodeRepository otpCodeRepository
+        OtpCodeRepository otpCodeRepository,
+        TaskDataPurger taskDataPurger
     ) {
+        this.taskDataPurger = taskDataPurger;
         this.userRepository = userRepository;
         this.collegeService = collegeService;
         this.interestSelectionRepository = interestSelectionRepository;
@@ -289,6 +292,9 @@ public class UserService {
                 .forEach(messageReceiptRepository::delete);
         }
         chatMessageRepository.deleteBySenderId(userId);
+
+        // 2b. Daily tasks, peer reviews, solo tasks, sessions watched, points/streak
+        taskDataPurger.purge(userId);
 
         // 3. Match membership (leaveAllGroups already deactivated, but hard-delete the rows)
         matchMemberRepository.deleteByUserId(userId);
