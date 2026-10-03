@@ -53,7 +53,9 @@ const FeedbackPage = lazy(() => import('./pages/feedback/FeedbackPage'));
 const SessionsPage = lazy(() => import('./pages/sessions/SessionsPage'));
 const SessionDetailPage = lazy(() => import('./pages/sessions/SessionDetailPage'));
 const SeriousnessTestPage = lazy(() => import('./pages/test/SeriousnessTestPage'));
-
+const CertificatePage = lazy(() => import('./pages/certificates/CertificatePage'));
+const VerifyCertificatePage = lazy(() => import('./pages/certificates/VerifyCertificatePage'));
+const CertificatesPage = lazy(() => import('./pages/certificates/CertificatesPage'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
 const AdminVerificationsPage = lazy(() => import('./pages/admin/AdminVerificationsPage'));
@@ -68,15 +70,18 @@ const AdminQuestionsPage = lazy(() => import('./pages/admin/AdminQuestionsPage')
 const AdminTaskBanksPage = lazy(() => import('./pages/admin/AdminTaskBanksPage'));
 const AdminSessionsPage = lazy(() => import('./pages/admin/AdminSessionsPage'));
 const AdminSoloReviewsPage = lazy(() => import('./pages/admin/AdminSoloReviewsPage'));
+const AdminCertificatesPage = lazy(() => import('./pages/admin/AdminCertificatesPage'));
+const AdminCertificateClaimsPage = lazy(() => import('./pages/admin/AdminCertificateClaimsPage'));
+const AdminAllCertificateClaimsPage = lazy(() => import('./pages/admin/AdminCertificateClaimsPage.jsx'));
 const AdminAnalyticsPage = lazy(() => import('./pages/admin/AdminAnalyticsPage'));
 
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 // Global Suspense Fallback
 const PageLoader = () => (
-  <div className="flex min-h-screen items-center justify-center bg-paper text-accent-500">
-    <Spinner size="lg" />
-  </div>
+    <div className="flex min-h-screen items-center justify-center bg-paper text-accent-500">
+      <Spinner size="lg" />
+    </div>
 );
 
 // The one and only place `<meta name="robots">` is ever rendered. It used to
@@ -122,81 +127,111 @@ function App() {
   }, [location.pathname]);
 
   return (
-    <ErrorBoundary>
-      {/* No <title> here on purpose. React 19 hoists every <title> in the tree
+      <ErrorBoundary>
+        {/* No <title> here on purpose. React 19 hoists every <title> in the tree
           into <head> without deduping, so a generic one at this level stacks a
           second (and, with index.html's, a third) title tag onto every public
           page — Google reads the first it finds, which was not the page's own.
           Each public route sets its own title; authenticated routes fall back
           to index.html's, and they're noindex anyway. */}
-      <Helmet>
-        <meta name="robots" content={robotsFor(location.pathname)} />
-      </Helmet>
-      <Suspense fallback={<PageLoader />}>
-        <Routes>
-          {/* Public marketing landing. AuthGuard treats "/" as public and
+        <Helmet>
+          <meta name="robots" content={robotsFor(location.pathname)} />
+        </Helmet>
+        <Suspense fallback={<PageLoader />}>
+          <Routes>
+            {/* Public marketing landing. AuthGuard treats "/" as public and
               bounces signed-in users to /home (or /admin). */}
-          <Route element={<AuthGuard />}>
-            <Route path="/" element={<LandingPage />} />
-          </Route>
+            <Route element={<AuthGuard />}>
+              <Route path="/" element={<LandingPage />} />
+            </Route>
 
-          {/* Public content pages. Open to everyone signed in or out, same as
+            {/* Public content pages. Open to everyone signed in or out, same as
               the landing page — AuthGuard only redirects unauthenticated users
               away from routes that are neither the landing nor auth-only. */}
-          <Route path="/about" element={<AboutPage />} />
-          <Route path="/faq" element={<FaqPage />} />
-          <Route path="/blog" element={<BlogIndexPage />} />
-          <Route path="/blog/:slug" element={<BlogPostPage />} />
-          <Route path="/privacy" element={<PrivacyPage />} />
-          <Route path="/terms" element={<TermsPage />} />
-          <Route path="/bring-collzap" element={<BringCollZapPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/faq" element={<FaqPage />} />
+            <Route path="/blog" element={<BlogIndexPage />} />
+            <Route path="/blog/:slug" element={<BlogPostPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/bring-collzap" element={<BringCollZapPage />} />
+            {/* The QR code on every certificate opens this; anyone can check a number. */}
+            <Route path="/verify-certificate/:code" element={<VerifyCertificatePage />} />
 
-          {/* Public Routes (Login/Signup) */}
-          <Route element={<AuthGuard />}>
-            <Route element={<PublicLayout />}>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/signup" element={<SignupPage />} />
-              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-              <Route path="/admin/login" element={<AdminLoginPage />} />
-            </Route>
-          </Route>
-
-          {/* Onboarding Routes */}
-          <Route element={<AuthGuard />}>
-            <Route element={<OnboardingGuard />}>
-              <Route element={<OnboardingLayout />}>
-                <Route path="/onboarding" element={<OnboardingPage />} />
+            {/* Public Routes (Login/Signup) */}
+            <Route element={<AuthGuard />}>
+              <Route element={<PublicLayout />}>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/signup" element={<SignupPage />} />
+                <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                <Route path="/admin/login" element={<AdminLoginPage />} />
               </Route>
             </Route>
-          </Route>
 
-          {/* Focused Assessment Route (No Sidebar) */}
-          <Route element={<AuthGuard />}>
-            <Route element={<OnboardingGuard />}>
-              <Route path="/test" element={<SeriousnessTestPage />} />
-            </Route>
-          </Route>
-
-          {/* Authenticated App Routes */}
-          <Route element={<AuthGuard />}>
-            <Route element={<OnboardingGuard />}>
-              <Route element={<AppShell />}>
-                <Route path="/home" element={<HomePage />} />
-                <Route path="/chat" element={<ChatShell />}>
-                  <Route index element={<ChatEmptySelection />} />
-                  <Route path=":roomId" element={<ChatRoomPage />} />
+            {/* Onboarding Routes */}
+            <Route element={<AuthGuard />}>
+              <Route element={<OnboardingGuard />}>
+                <Route element={<OnboardingLayout />}>
+                  <Route path="/onboarding" element={<OnboardingPage />} />
                 </Route>
-                <Route path="/matches" element={<MatchesPage />} />
-                <Route path="/matches/:groupId" element={<GroupDetailPage />} />
-                <Route path="/sessions" element={<SessionsPage />} />
-                <Route path="/sessions/:sessionId" element={<SessionDetailPage />} />
-                <Route path="/profile" element={<ProfilePage />} />
-                <Route path="/profile/:userId" element={<PeerProfilePage />} />
-                <Route path="/feedback" element={<FeedbackPage />} />
-                <Route path="/settings" element={<SettingsPage />} />
-                <Route path="/notifications" element={<NotificationsPage />} />
               </Route>
             </Route>
+
+            {/* Focused Assessment Route (No Sidebar) */}
+            <Route element={<AuthGuard />}>
+              <Route element={<OnboardingGuard />}>
+                <Route path="/test" element={<SeriousnessTestPage />} />
+              </Route>
+            </Route>
+
+            {/* Authenticated App Routes */}
+            <Route element={<AuthGuard />}>
+              <Route element={<OnboardingGuard />}>
+                <Route element={<AppShell />}>
+                  <Route path="/home" element={<HomePage />} />
+                  <Route path="/chat" element={<ChatShell />}>
+                    <Route index element={<ChatEmptySelection />} />
+                    <Route path=":roomId" element={<ChatRoomPage />} />
+                  </Route>
+                  <Route path="/matches" element={<MatchesPage />} />
+                  <Route path="/matches/:groupId" element={<GroupDetailPage />} />
+                  <Route path="/sessions" element={<SessionsPage />} />
+                  <Route path="/sessions/:sessionId" element={<SessionDetailPage />} />
+                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/profile/:userId" element={<PeerProfilePage />} />
+                  <Route path="/feedback" element={<FeedbackPage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="/notifications" element={<NotificationsPage />} />
+                  <Route path="/certificates" element={<CertificatesPage />} />
+                  <Route path="/certificates/:ruleId" element={<CertificatePage />} />
+                </Route>
+              </Route>
+            </Route>
+
+            {/* Admin Routes */}
+            <Route element={<AuthGuard />}>
+              <Route element={<AdminGuard />}>
+                <Route element={<AdminLayout />}>
+                  <Route path="/admin" element={<AdminDashboard />} />
+                  <Route path="/admin/users" element={<AdminUsersPage />} />
+                  <Route path="/admin/verifications" element={<AdminVerificationsPage />} />
+                  <Route path="/admin/applications" element={<AdminApplicationsPage />} />
+                  <Route path="/admin/matches" element={<AdminMatchesPage />} />
+                  <Route path="/admin/queue" element={<AdminQueuePage />} />
+                  <Route path="/admin/reports" element={<AdminReportsPage />} />
+                  <Route path="/admin/feedback" element={<AdminFeedbackPage />} />
+                  <Route path="/admin/colleges" element={<AdminCollegesPage />} />
+                  <Route path="/admin/interests" element={<AdminInterestsPage />} />
+                  <Route path="/admin/questions" element={<AdminQuestionsPage />} />
+                  <Route path="/admin/task-banks" element={<AdminTaskBanksPage />} />
+                  <Route path="/admin/sessions" element={<AdminSessionsPage />} />
+                  <Route path="/admin/task-reviews" element={<AdminSoloReviewsPage />} />
+                  <Route path="/admin/certificates" element={<AdminCertificatesPage />} />
+                  {/* Per-rule claims: holders + every download event for one certificate */}
+                  <Route path="/admin/certificates/:id/claims" element={<AdminCertificateClaimsPage />} />
+                  {/* Global claims: every download across every certificate */}
+                  <Route path="/admin/certificate-claims" element={<AdminAllCertificateClaimsPage />} />
+                </Route>
           </Route>
 
           {/* Admin Routes */}
@@ -220,13 +255,12 @@ function App() {
                 <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
               </Route>
             </Route>
-          </Route>
 
-          {/* 404 Not Found */}
-          <Route path="*" element={<NotFoundPage />} />
-        </Routes>
-      </Suspense>
-    </ErrorBoundary>
+            {/* 404 Not Found */}
+            <Route path="*" element={<NotFoundPage />} />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
   );
 }
 

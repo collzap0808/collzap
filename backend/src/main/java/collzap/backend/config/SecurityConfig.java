@@ -32,10 +32,10 @@ public class SecurityConfig {
     private final CollzapProperties properties;
 
     public SecurityConfig(
-        JwtAuthenticationFilter jwtAuthenticationFilter,
-        JsonAuthenticationEntryPoint authenticationEntryPoint,
-        JsonAccessDeniedHandler accessDeniedHandler,
-        CollzapProperties properties
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            JsonAuthenticationEntryPoint authenticationEntryPoint,
+            JsonAccessDeniedHandler accessDeniedHandler,
+            CollzapProperties properties
     ) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.authenticationEntryPoint = authenticationEntryPoint;
@@ -46,26 +46,28 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .exceptionHandling(handling -> handling
-                .authenticationEntryPoint(authenticationEntryPoint)
-                .accessDeniedHandler(accessDeniedHandler))
-            .authorizeHttpRequests(auth -> auth
-                // Onboarding: signup, OTP request/verify, login, token refresh.
-                .requestMatchers("/api/auth/**").permitAll()
-                .requestMatchers("/api/admin/auth/login").permitAll()
-                // College list is needed on the signup screen before a token exists.
-                .requestMatchers(HttpMethod.GET, "/api/colleges/**").permitAll()
-                // STOMP handshake authenticates on CONNECT, not on the HTTP upgrade.
-                .requestMatchers("/ws/**").permitAll()
-                .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/college-applications", "/api/college-applications/document").permitAll()
-                .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                .requestMatchers("/api/**").hasRole("USER")
-                .anyRequest().denyAll())
-            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                .csrf(csrf -> csrf.disable())
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(handling -> handling
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler))
+                .authorizeHttpRequests(auth -> auth
+                        // Onboarding: signup, OTP request/verify, login, token refresh.
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/admin/auth/login").permitAll()
+                        // College list is needed on the signup screen before a token exists.
+                        .requestMatchers(HttpMethod.GET, "/api/colleges/**").permitAll()
+                        // STOMP handshake authenticates on CONNECT, not on the HTTP upgrade.
+                        .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/actuator/health", "/actuator/health/**", "/actuator/info").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/college-applications", "/api/college-applications/document").permitAll()
+                        // QR code on a certificate opens a public "is this real?" page.
+                        .requestMatchers(HttpMethod.GET, "/api/public/certificates/**").permitAll()
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/**").hasRole("USER")
+                        .anyRequest().denyAll())
+                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

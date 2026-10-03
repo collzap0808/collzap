@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Certificate</title>
+    <style>
+        @page { size: 297mm 210mm; margin: 0; }
+        html, body { margin: 0; padding: 0; }
+        body { font-family: serif; color: #1f2937; }
+        .page { position: relative; width: 297mm; height: 209mm; background: #fffdf7; overflow: hidden; }
+        .frame { position: absolute; top: 8mm; left: 8mm; width: 275mm; height: 187mm; border: 3mm double #b8860b; }
+        .row { position: absolute; left: 0; width: 297mm; text-align: center; }
+        .brand { top: 22mm; font-size: 16pt; letter-spacing: 6px; color: #b8860b; font-family: sans-serif; }
+        .title { top: 34mm; font-size: 40pt; font-weight: bold; color: #111827; }
+        .sub   { top: 62mm; font-size: 15pt; color: #4b5563; }
+        .name  { top: 76mm; font-size: 42pt; font-weight: bold; color: #7c2d12; }
+        .line  { position: absolute; top: 97mm; left: 75mm; width: 147mm; border-top: 0.6mm solid #b8860b; }
+        .text  { top: 103mm; font-size: 15pt; line-height: 1.5; padding: 0 40mm; width: 217mm; }
+        .college { top: 128mm; font-size: 14pt; color: #374151; font-style: italic; }
+        .stamp { position: absolute; top: 140mm; left: 124mm; width: 40mm; height: 40mm; border: 1.2mm solid #b91c1c;
+            border-radius: 50%; text-align: center; color: #b91c1c; font-family: sans-serif; font-weight: bold; }
+        .stamp .t1 { margin-top: 10mm; font-size: 11pt; }
+        .stamp .t2 { font-size: 9pt; margin-top: 1mm; }
+        .meta  { position: absolute; top: 168mm; left: 24mm; font-size: 10pt; color: #4b5563; font-family: sans-serif; }
+        .qr    { position: absolute; top: 150mm; left: 235mm; width: 30mm; height: 30mm; }
+        .qrt   { position: absolute; top: 181mm; left: 228mm; width: 44mm; text-align: center; font-size: 8pt; color: #6b7280; font-family: sans-serif; }
+    </style>
+</head>
+<body>
+<div class="page">
+    <div class="frame"></div>
+    <div class="row brand">COLLZAP</div>
+    <div class="row title">{{certificateName}}</div>
+    <div class="row sub">This certificate is proudly presented to</div>
+    <div class="row name">{{studentName}}</div>
+    <div class="line"></div>
+    <div class="row text">for reaching the <b>{{level}}</b> level by earning <b>{{points}}</b> points on Collzap.</div>
+    <div class="row college">{{collegeName}}</div>
+
+    <div class="stamp"><div class="t1">VERIFIED</div><div class="t2">COLLZAP</div></div>
+
+    <div class="meta">Certificate No: {{certificateCode}}<br>Date: {{issuedDate}}</div>
+    <img class="qr" src="{{qrCode}}" alt="QR" />
+    <div class="qrt">Scan to verify</div>
+</div>
+</body>
+</html>
