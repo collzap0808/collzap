@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Navigate, Routes, Route, useLocation, useParams } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import ErrorBoundary from './components/ErrorBoundary';
 import { useThemeStore } from './store/useThemeStore';
@@ -53,9 +53,9 @@ const FeedbackPage = lazy(() => import('./pages/feedback/FeedbackPage'));
 const SessionsPage = lazy(() => import('./pages/sessions/SessionsPage'));
 const SessionDetailPage = lazy(() => import('./pages/sessions/SessionDetailPage'));
 const SeriousnessTestPage = lazy(() => import('./pages/test/SeriousnessTestPage'));
+const CertificatesPage = lazy(() => import('./pages/certificates/CertificatesPage'));
 const CertificatePage = lazy(() => import('./pages/certificates/CertificatePage'));
 const VerifyCertificatePage = lazy(() => import('./pages/certificates/VerifyCertificatePage'));
-const CertificatesPage = lazy(() => import('./pages/certificates/CertificatesPage'));
 const AdminDashboard = lazy(() => import('./pages/admin/AdminDashboard'));
 const AdminUsersPage = lazy(() => import('./pages/admin/AdminUsersPage'));
 const AdminVerificationsPage = lazy(() => import('./pages/admin/AdminVerificationsPage'));
@@ -72,7 +72,6 @@ const AdminSessionsPage = lazy(() => import('./pages/admin/AdminSessionsPage'));
 const AdminSoloReviewsPage = lazy(() => import('./pages/admin/AdminSoloReviewsPage'));
 const AdminCertificatesPage = lazy(() => import('./pages/admin/AdminCertificatesPage'));
 const AdminCertificateClaimsPage = lazy(() => import('./pages/admin/AdminCertificateClaimsPage'));
-const AdminAllCertificateClaimsPage = lazy(() => import('./pages/admin/AdminCertificateClaimsPage.jsx'));
 const AdminAnalyticsPage = lazy(() => import('./pages/admin/AdminAnalyticsPage'));
 
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
@@ -83,6 +82,13 @@ const PageLoader = () => (
       <Spinner size="lg" />
     </div>
 );
+
+// Old per-certificate link /admin/certificates/:id/claims -> the claims page
+// filtered to that certificate.
+function CertificateClaimsRedirect() {
+  const { id } = useParams();
+  return <Navigate to={`/admin/certificate-claims?rule=${id}`} replace />;
+}
 
 // The one and only place `<meta name="robots">` is ever rendered. It used to
 // be split across this file's own default and each public page's Helmet
@@ -208,7 +214,7 @@ function App() {
               </Route>
             </Route>
 
-            {/* Admin Routes */}
+            {/* Admin Routes (one block only) */}
             <Route element={<AuthGuard />}>
               <Route element={<AdminGuard />}>
                 <Route element={<AdminLayout />}>
@@ -226,33 +232,12 @@ function App() {
                   <Route path="/admin/task-banks" element={<AdminTaskBanksPage />} />
                   <Route path="/admin/sessions" element={<AdminSessionsPage />} />
                   <Route path="/admin/task-reviews" element={<AdminSoloReviewsPage />} />
+                  <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
                   <Route path="/admin/certificates" element={<AdminCertificatesPage />} />
-                  {/* Per-rule claims: holders + every download event for one certificate */}
-                  <Route path="/admin/certificates/:id/claims" element={<AdminCertificateClaimsPage />} />
-                  {/* Global claims: every download across every certificate */}
-                  <Route path="/admin/certificate-claims" element={<AdminAllCertificateClaimsPage />} />
+                  {/* Claims: every student who claimed, filter by certificate with ?rule=<id> */}
+                  <Route path="/admin/certificate-claims" element={<AdminCertificateClaimsPage />} />
+                  <Route path="/admin/certificates/:id/claims" element={<CertificateClaimsRedirect />} />
                 </Route>
-          </Route>
-
-          {/* Admin Routes */}
-          <Route element={<AuthGuard />}>
-            <Route element={<AdminGuard />}>
-              <Route element={<AdminLayout />}>
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/users" element={<AdminUsersPage />} />
-                <Route path="/admin/verifications" element={<AdminVerificationsPage />} />
-                <Route path="/admin/applications" element={<AdminApplicationsPage />} />
-                <Route path="/admin/matches" element={<AdminMatchesPage />} />
-                <Route path="/admin/queue" element={<AdminQueuePage />} />
-                <Route path="/admin/reports" element={<AdminReportsPage />} />
-                <Route path="/admin/feedback" element={<AdminFeedbackPage />} />
-                <Route path="/admin/colleges" element={<AdminCollegesPage />} />
-                <Route path="/admin/interests" element={<AdminInterestsPage />} />
-                <Route path="/admin/questions" element={<AdminQuestionsPage />} />
-                <Route path="/admin/task-banks" element={<AdminTaskBanksPage />} />
-                <Route path="/admin/sessions" element={<AdminSessionsPage />} />
-                <Route path="/admin/task-reviews" element={<AdminSoloReviewsPage />} />
-                <Route path="/admin/analytics" element={<AdminAnalyticsPage />} />
               </Route>
             </Route>
 
