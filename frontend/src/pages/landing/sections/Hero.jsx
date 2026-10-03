@@ -2,7 +2,7 @@ import { motion } from 'motion/react';
 import TicketButton from '../../../components/ui/TicketButton';
 import { reveal, useReducedMotion } from '../../../lib/motion';
 import { usePrimaryCta } from '../shared';
-import CampusHubSketch from './hero/CampusHubSketch';
+import StoryLoop from './hero/StoryLoop';
 
 // Hero-only palette (Ice & Amber), fixed tokens on `.hero-sky` — never follows the app theme.
 const ink = 'text-[rgb(var(--h-ink))]';
@@ -105,7 +105,7 @@ export default function Hero() {
             {...reveal(reduced, 0.12)}
             className="-mx-4 w-[calc(100%+2rem)] max-w-[720px] sm:mx-auto sm:w-full lg:-mr-8 lg:ml-0 lg:w-[110%] lg:max-w-none xl:-mr-12 xl:w-[113%] min-[1400px]:-mr-32 min-[1400px]:w-[126%] 2xl:-mr-40"
           >
-            <CampusHubSketch className="h-auto w-full" />
+            <StoryLoop className="h-auto w-full" />
           </motion.div>
         </div>
 
